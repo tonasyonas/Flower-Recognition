@@ -3,9 +3,9 @@
 ## Track F: Advanced Few-Shot Flower Recognition
 
 **Team Members:**
-- Jonas
-- Thorjy (qwertyJY)
-- Syed Abu Thahir
+- Jonas Tua 
+- Jia Ying Thor
+- F Syed Abu Thahir
 
 ### Proposed Technique & Architecture
 - **Base Model:** Pre-trained Vision Transformer (ViT).
