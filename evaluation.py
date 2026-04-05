@@ -52,7 +52,7 @@ if __name__ == "__main__":
             logits, embeddings = model(inputs)
 
             # Get predictions
-            _, predicted = torch.max(logits.data, 1)
+            _, predicted = torch.max(logits, 1)
 
             all_preds.extend(predicted.cpu().numpy())
             all_targets.extend(targets.cpu().numpy())
@@ -72,6 +72,61 @@ if __name__ == "__main__":
 
     test_accuracy = np.mean(all_preds == all_targets)
     print(f"Test Accuracy: {test_accuracy * 100:.2f}%")
+
+    # ------------------
+    # Top-K Accuracy
+    # ------------------
+    def top_k_accuracy(logits, targets, k):
+        sorted_indices = np.argsort(logits, axis=1)[:, ::-1]  # descending
+        top_k_indices = sorted_indices[:, :k]
+        correct = np.any(top_k_indices == targets[:, None], axis=1)
+        return np.mean(correct)
+
+    top1_acc = top_k_accuracy(all_logits, all_targets, k=1)
+    top3_acc = top_k_accuracy(all_logits, all_targets, k=3)
+    top5_acc = top_k_accuracy(all_logits, all_targets, k=5)
+
+    print(f"Top-1 Accuracy: {top1_acc * 100:.2f}%")
+    print(f"Top-3 Accuracy: {top3_acc * 100:.2f}%")
+    print(f"Top-5 Accuracy: {top5_acc * 100:.2f}%")
+
+    # ------------------
+    # Per-Class Accuracy Breakdown
+    # ------------------
+    report_dict = classification_report(
+        all_targets, all_preds, zero_division=0, output_dict=True
+    )
+    class_accuracies = []
+    for cls_idx in range(102):
+        if str(cls_idx) in report_dict:
+            class_accuracies.append((cls_idx, report_dict[str(cls_idx)]["f1-score"]))
+
+    # Sort by f1-score
+    class_accuracies.sort(key=lambda x: x[1])
+
+    worst_10 = class_accuracies[:10]
+    best_10 = class_accuracies[-10:]
+
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+    # Worst 10
+    axes[0].barh(
+        [str(x[0]) for x in worst_10], [x[1] for x in worst_10], color="salmon"
+    )
+    axes[0].set_title("Top 10 Worst Performing Classes (F1-Score)")
+    axes[0].set_xlim(0, 1.0)
+
+    # Best 10
+    axes[1].barh(
+        [str(x[0]) for x in best_10], [x[1] for x in best_10], color="lightgreen"
+    )
+    axes[1].set_title("Top 10 Best Performing Classes (F1-Score)")
+    axes[1].set_xlim(0, 1.0)
+
+    plt.tight_layout()
+    plt.savefig("top_bottom_10_classes.png", dpi=300)
+    plt.close()
+    print("Saved top_bottom_10_classes.png")
 
     report = classification_report(all_targets, all_preds, zero_division=0)
 
