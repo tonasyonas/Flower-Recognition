@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
 from tqdm import tqdm
+import sklearn.manifold as manifold
 
 from models.vit_model import ViTForFlowerRecognition
 from utils.data_loader import get_dataloaders
@@ -31,9 +32,6 @@ if __name__ == "__main__":
 
     model = model.to(device)
     model.eval()
-
-    import sklearn.manifold as manifold
-    from torchvision.utils import make_grid
 
     all_preds = []
     all_targets = []
@@ -127,6 +125,69 @@ if __name__ == "__main__":
     plt.savefig("top_bottom_10_classes.png", dpi=300)
     plt.close()
     print("Saved top_bottom_10_classes.png")
+
+    # ------------------
+    # Example Predictions Grid
+    # ------------------
+    import torchvision.transforms.functional as F
+
+    # Denormalize images for plotting
+    mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+    std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+
+    num_samples = min(15, len(sample_images))
+    fig, axes = plt.subplots(3, 5, figsize=(15, 10))
+    axes = axes.flatten()
+
+    for i in range(num_samples):
+        img = sample_images[i].cpu() * std + mean
+        img = torch.clamp(img, 0, 1).permute(1, 2, 0).numpy()
+
+        pred = sample_preds[i].item()
+        true = sample_targets[i].item()
+
+        axes[i].imshow(img)
+        axes[i].axis("off")
+
+        color = "green" if pred == true else "red"
+        axes[i].set_title(f"Pred: {pred} | True: {true}", color=color)
+
+    for j in range(num_samples, len(axes)):
+        axes[j].axis("off")
+
+    plt.tight_layout()
+    plt.savefig("example_predictions.png", dpi=300)
+    plt.close()
+    print("Saved example_predictions.png")
+
+    # ------------------
+    # t-SNE Embeddings Plot
+    # ------------------
+    print("Calculating t-SNE embeddings (this may take a minute)...")
+    tsne = manifold.TSNE(n_components=2, random_state=42, perplexity=30)
+    # Use a subset if dataset is too large, but 6149 should be fast enough for t-sne
+    embeddings_2d = tsne.fit_transform(all_embeddings)
+
+    plt.figure(figsize=(14, 12))
+    scatter = plt.scatter(
+        embeddings_2d[:, 0],
+        embeddings_2d[:, 1],
+        c=all_targets,
+        cmap="nipy_spectral",
+        alpha=0.7,
+        s=15,
+    )
+    plt.colorbar(scatter, label="True Class Label")
+    plt.title(
+        "t-SNE Projection of ViT-VPT Latent Embeddings\n(Showing effect of Triplet Loss)",
+        fontsize=16,
+    )
+    plt.xlabel("t-SNE Dimension 1")
+    plt.ylabel("t-SNE Dimension 2")
+    plt.tight_layout()
+    plt.savefig("tsne_embeddings.png", dpi=300)
+    plt.close()
+    print("Saved tsne_embeddings.png")
 
     report = classification_report(all_targets, all_preds, zero_division=0)
 
