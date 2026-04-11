@@ -21,7 +21,7 @@ class ViTForFlowerRecognition(nn.Module):
         # Shape: [1, num_prompts, embed_dim]
         self.num_prompts = num_prompts
         self.prompts = nn.Parameter(torch.randn(1, num_prompts, embed_dim))
-        nn.init.xavier_uniform_(self.prompts)
+        nn.init.trunc_normal_(self.prompts, std=0.02)
         
     def forward(self, x):
         # We need to manually inject the prompts before the transformer encoder.

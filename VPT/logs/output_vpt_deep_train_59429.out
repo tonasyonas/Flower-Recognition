@@ -1,0 +1,171 @@
+Initializing VPT-Deep training on cuda...
+🌱 Random seed set to: 69
+Trainable parameters: 170598
+Starting VPT-Deep Training Loop...
+Epoch 1/50 | Time: 17s
+Train Loss: 4.2490 | Train Acc: 0.1275
+Val Loss:   3.1953 | Val Acc:   0.5127
+--> New best validation accuracy: 0.5127. Saving checkpoint.
+Epoch 2/50 | Time: 16s
+Train Loss: 2.5245 | Train Acc: 0.6319
+Val Loss:   1.7560 | Val Acc:   0.7559
+--> New best validation accuracy: 0.7559. Saving checkpoint.
+Epoch 3/50 | Time: 16s
+Train Loss: 1.6630 | Train Acc: 0.7619
+Val Loss:   1.1854 | Val Acc:   0.8245
+--> New best validation accuracy: 0.8245. Saving checkpoint.
+Epoch 4/50 | Time: 16s
+Train Loss: 1.0439 | Train Acc: 0.8666
+Val Loss:   0.9108 | Val Acc:   0.8765
+--> New best validation accuracy: 0.8765. Saving checkpoint.
+Epoch 5/50 | Time: 16s
+Train Loss: 1.1106 | Train Acc: 0.8542
+Val Loss:   0.7743 | Val Acc:   0.8990
+--> New best validation accuracy: 0.8990. Saving checkpoint.
+Epoch 6/50 | Time: 16s
+Train Loss: 1.0916 | Train Acc: 0.8386
+Val Loss:   0.6909 | Val Acc:   0.9098
+--> New best validation accuracy: 0.9098. Saving checkpoint.
+Epoch 7/50 | Time: 17s
+Train Loss: 0.9633 | Train Acc: 0.8516
+Val Loss:   0.6365 | Val Acc:   0.9039
+Epoch 8/50 | Time: 16s
+Train Loss: 0.5876 | Train Acc: 0.9285
+Val Loss:   0.5807 | Val Acc:   0.9088
+Epoch 9/50 | Time: 17s
+Train Loss: 0.5456 | Train Acc: 0.9294
+Val Loss:   0.5495 | Val Acc:   0.9147
+--> New best validation accuracy: 0.9147. Saving checkpoint.
+Epoch 10/50 | Time: 15s
+Train Loss: 0.7927 | Train Acc: 0.8781
+Val Loss:   0.5492 | Val Acc:   0.9186
+--> New best validation accuracy: 0.9186. Saving checkpoint.
+Epoch 11/50 | Time: 16s
+Train Loss: 0.7203 | Train Acc: 0.8889
+Val Loss:   0.5325 | Val Acc:   0.9235
+--> New best validation accuracy: 0.9235. Saving checkpoint.
+Epoch 12/50 | Time: 91s
+Train Loss: 0.6299 | Train Acc: 0.9114
+Val Loss:   0.5134 | Val Acc:   0.9167
+Epoch 13/50 | Time: 16s
+Train Loss: 0.8407 | Train Acc: 0.8541
+Val Loss:   0.5007 | Val Acc:   0.9176
+Epoch 14/50 | Time: 16s
+Train Loss: 0.7603 | Train Acc: 0.8534
+Val Loss:   0.4834 | Val Acc:   0.9235
+Epoch 15/50 | Time: 16s
+Train Loss: 0.5300 | Train Acc: 0.9117
+Val Loss:   0.4792 | Val Acc:   0.9245
+--> New best validation accuracy: 0.9245. Saving checkpoint.
+Epoch 16/50 | Time: 16s
+Train Loss: 0.4744 | Train Acc: 0.9267
+Val Loss:   0.4481 | Val Acc:   0.9265
+--> New best validation accuracy: 0.9265. Saving checkpoint.
+Epoch 17/50 | Time: 16s
+Train Loss: 0.7857 | Train Acc: 0.8707
+Val Loss:   0.4714 | Val Acc:   0.9206
+Epoch 18/50 | Time: 16s
+Train Loss: 0.5836 | Train Acc: 0.9006
+Val Loss:   0.4486 | Val Acc:   0.9235
+Epoch 19/50 | Time: 16s
+Train Loss: 0.5538 | Train Acc: 0.9265
+Val Loss:   0.4440 | Val Acc:   0.9324
+--> New best validation accuracy: 0.9324. Saving checkpoint.
+Epoch 20/50 | Time: 16s
+Train Loss: 0.6002 | Train Acc: 0.8789
+Val Loss:   0.4562 | Val Acc:   0.9255
+Epoch 21/50 | Time: 16s
+Train Loss: 0.7109 | Train Acc: 0.8684
+Val Loss:   0.4365 | Val Acc:   0.9314
+Epoch 22/50 | Time: 16s
+Train Loss: 0.6199 | Train Acc: 0.9001
+Val Loss:   0.4348 | Val Acc:   0.9333
+--> New best validation accuracy: 0.9333. Saving checkpoint.
+Epoch 23/50 | Time: 16s
+Train Loss: 0.4439 | Train Acc: 0.9290
+Val Loss:   0.4555 | Val Acc:   0.9235
+Epoch 24/50 | Time: 16s
+Train Loss: 0.5829 | Train Acc: 0.9181
+Val Loss:   0.4410 | Val Acc:   0.9314
+Epoch 25/50 | Time: 16s
+Train Loss: 0.5835 | Train Acc: 0.8910
+Val Loss:   0.4238 | Val Acc:   0.9333
+Epoch 26/50 | Time: 16s
+Train Loss: 0.5289 | Train Acc: 0.9210
+Val Loss:   0.4167 | Val Acc:   0.9314
+Epoch 27/50 | Time: 16s
+Train Loss: 0.6765 | Train Acc: 0.8673
+Val Loss:   0.4297 | Val Acc:   0.9314
+Epoch 28/50 | Time: 17s
+Train Loss: 0.5970 | Train Acc: 0.8954
+Val Loss:   0.4224 | Val Acc:   0.9333
+Epoch 29/50 | Time: 16s
+Train Loss: 0.6818 | Train Acc: 0.8796
+Val Loss:   0.4279 | Val Acc:   0.9373
+--> New best validation accuracy: 0.9373. Saving checkpoint.
+Epoch 30/50 | Time: 16s
+Train Loss: 0.5499 | Train Acc: 0.8874
+Val Loss:   0.4226 | Val Acc:   0.9304
+Epoch 31/50 | Time: 16s
+Train Loss: 0.5597 | Train Acc: 0.8973
+Val Loss:   0.4137 | Val Acc:   0.9304
+Epoch 32/50 | Time: 16s
+Train Loss: 0.5969 | Train Acc: 0.8919
+Val Loss:   0.4150 | Val Acc:   0.9314
+Epoch 33/50 | Time: 16s
+Train Loss: 0.5501 | Train Acc: 0.9028
+Val Loss:   0.4194 | Val Acc:   0.9353
+Epoch 34/50 | Time: 16s
+Train Loss: 0.5558 | Train Acc: 0.8833
+Val Loss:   0.4089 | Val Acc:   0.9333
+Epoch 35/50 | Time: 81s
+Train Loss: 0.6408 | Train Acc: 0.8704
+Val Loss:   0.4127 | Val Acc:   0.9382
+--> New best validation accuracy: 0.9382. Saving checkpoint.
+Epoch 36/50 | Time: 17s
+Train Loss: 0.3564 | Train Acc: 0.9517
+Val Loss:   0.4082 | Val Acc:   0.9392
+--> New best validation accuracy: 0.9392. Saving checkpoint.
+Epoch 37/50 | Time: 16s
+Train Loss: 0.5445 | Train Acc: 0.8960
+Val Loss:   0.4079 | Val Acc:   0.9382
+Epoch 38/50 | Time: 16s
+Train Loss: 0.4147 | Train Acc: 0.9237
+Val Loss:   0.4098 | Val Acc:   0.9343
+Epoch 39/50 | Time: 16s
+Train Loss: 0.4035 | Train Acc: 0.9241
+Val Loss:   0.3966 | Val Acc:   0.9343
+Epoch 40/50 | Time: 16s
+Train Loss: 0.6644 | Train Acc: 0.8602
+Val Loss:   0.3954 | Val Acc:   0.9373
+Epoch 41/50 | Time: 16s
+Train Loss: 0.0272 | Train Acc: 1.0000
+Val Loss:   0.3848 | Val Acc:   0.9392
+Epoch 42/50 | Time: 16s
+Train Loss: 0.0250 | Train Acc: 1.0000
+Val Loss:   0.3772 | Val Acc:   0.9382
+Epoch 43/50 | Time: 16s
+Train Loss: 0.0232 | Train Acc: 1.0000
+Val Loss:   0.3732 | Val Acc:   0.9382
+Epoch 44/50 | Time: 16s
+Train Loss: 0.0221 | Train Acc: 1.0000
+Val Loss:   0.3705 | Val Acc:   0.9373
+Epoch 45/50 | Time: 16s
+Train Loss: 0.0219 | Train Acc: 1.0000
+Val Loss:   0.3688 | Val Acc:   0.9373
+Epoch 46/50 | Time: 16s
+Train Loss: 0.0219 | Train Acc: 1.0000
+Val Loss:   0.3677 | Val Acc:   0.9373
+Epoch 47/50 | Time: 16s
+Train Loss: 0.0216 | Train Acc: 1.0000
+Val Loss:   0.3670 | Val Acc:   0.9373
+Epoch 48/50 | Time: 16s
+Train Loss: 0.0215 | Train Acc: 1.0000
+Val Loss:   0.3666 | Val Acc:   0.9373
+Epoch 49/50 | Time: 16s
+Train Loss: 0.0212 | Train Acc: 1.0000
+Val Loss:   0.3665 | Val Acc:   0.9373
+Epoch 50/50 | Time: 21s
+Train Loss: 0.0213 | Train Acc: 1.0000
+Val Loss:   0.3664 | Val Acc:   0.9373
+VPT-Deep Training Complete. Best Validation Accuracy: 0.9392156862745098
