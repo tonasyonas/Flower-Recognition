@@ -1,4 +1,5 @@
 import torch
+from utils.set_seed import set_seed
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
@@ -91,6 +92,7 @@ def validate(model, dataloader, criterion, device):
 def train_model(epochs=50, batch_size=32, device="cpu"):
     print(f"Initializing training on {device}...")
 
+    set_seed()
     # 1. Load Data
     train_loader, val_loader, test_loader = get_dataloaders(batch_size=batch_size)
 
