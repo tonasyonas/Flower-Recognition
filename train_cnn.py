@@ -14,7 +14,7 @@ from utils.set_seed import set_seed
 
 
 def train_one_epoch(model, dataloader, criterion, optimizer, device, scaler=None):
-    """Train for one epoch with optional AMP, return average loss and accuracy."""
+    """Train for one epoch with optional AMP. MixUp is handled in the dataloader collate_fn."""
     model.train()
     running_loss = 0.0
     correct = 0
@@ -38,8 +38,12 @@ def train_one_epoch(model, dataloader, criterion, optimizer, device, scaler=None
 
         running_loss += loss.item() * inputs.size(0)
         _, predicted = torch.max(logits, 1)
-        correct += (predicted == targets).sum().item()
-        total += targets.size(0)
+        # Targets may be soft labels (batch, num_classes) from MixUp or hard labels (batch,)
+        if targets.ndim == 1:
+            correct += (predicted == targets).sum().item()
+        else:
+            correct += (predicted == targets.argmax(dim=1)).sum().item()
+        total += inputs.size(0)
 
     return running_loss / total, correct / total
 
@@ -77,18 +81,30 @@ def main():
     parser.add_argument('--seed', type=int, default=69)
     parser.add_argument('--k_shot', type=int, default=None,
                         help='Few-shot: number of training images per class')
+    parser.add_argument('--mixup', type=float, default=0.0,
+                        help='MixUp alpha (0=disabled, 0.2=recommended). Uses official torchvision v2.MixUp.')
+    parser.add_argument('--label_smoothing', type=float, default=0.0,
+                        help='Label smoothing factor (0=disabled, 0.1=recommended)')
+    parser.add_argument('--strong_aug', action='store_true',
+                        help='Use stronger augmentation (RandomResizedCrop, ColorJitter)')
     args = parser.parse_args()
 
     set_seed(args.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Training {args.model} on {device}")
 
-    # Data
+    # Data (MixUp applied via collate_fn in dataloader)
     if args.k_shot:
-        train_loader, val_loader, _ = get_fewshot_dataloaders(args.k_shot, batch_size=args.batch_size)
+        train_loader, val_loader, _ = get_fewshot_dataloaders(
+            args.k_shot, batch_size=args.batch_size, mixup_alpha=args.mixup,
+            strong_aug=args.strong_aug)
         print(f"Few-shot mode: {args.k_shot} images per class")
     else:
-        train_loader, val_loader, _ = get_dataloaders(batch_size=args.batch_size)
+        train_loader, val_loader, _ = get_dataloaders(
+            batch_size=args.batch_size, mixup_alpha=args.mixup,
+            strong_aug=args.strong_aug)
+    if args.strong_aug:
+        print("Strong augmentation enabled (RandomResizedCrop, ColorJitter)")
 
     # Model
     model_cls = MODEL_REGISTRY[args.model]
@@ -97,21 +113,29 @@ def main():
     print(f"Trainable parameters: {trainable:,}")
 
     # Training setup
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(model.parameters(), lr=args.lr)
+    criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
+    if args.label_smoothing > 0:
+        print(f"Label smoothing: {args.label_smoothing}")
+    optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
     # Mixed precision
     scaler = torch.amp.GradScaler('cuda') if device.type == 'cuda' else None
     if scaler:
         print("Mixed precision (AMP) enabled")
+    if args.mixup > 0:
+        print(f"MixUp enabled (alpha={args.mixup}, torchvision v2)")
 
     # Logging
     os.makedirs('results/checkpoints', exist_ok=True)
     os.makedirs('results/logs', exist_ok=True)
     shot_suffix = f'_{args.k_shot}shot' if args.k_shot else ''
-    log_path = f'results/logs/{args.model}{shot_suffix}_training_log.csv'
-    checkpoint_path = f'results/checkpoints/best_{args.model}{shot_suffix}.pth'
+    mixup_suffix = f'_mixup{args.mixup}' if args.mixup > 0 else ''
+    ls_suffix = f'_ls{args.label_smoothing}' if args.label_smoothing > 0 else ''
+    aug_suffix = '_strongaug' if args.strong_aug else ''
+    exp_name = f'{args.model}{shot_suffix}{mixup_suffix}{ls_suffix}{aug_suffix}'
+    log_path = f'results/logs/{exp_name}_training_log.csv'
+    checkpoint_path = f'results/checkpoints/best_{exp_name}.pth'
 
     best_val_acc = 0.0
 

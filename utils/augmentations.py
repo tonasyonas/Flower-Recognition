@@ -1,21 +1,15 @@
-import torch
-import numpy as np
+from torch.utils.data.dataloader import default_collate
+from torchvision.transforms import v2
 
-def mixup_data(x, y, alpha=1.0, use_cuda=True):
+
+class MixUpCollate:
     """
-    Returns mixed inputs, pairs of targets, and lambda
+    Picklable collate function that applies official torchvision v2.MixUp.
+    Works with num_workers > 0 on Windows.
+    Usage: DataLoader(dataset, collate_fn=MixUpCollate(num_classes=102, alpha=0.2))
     """
-    if alpha > 0:
-        lam = np.random.beta(alpha, alpha)
-    else:
-        lam = 1
+    def __init__(self, num_classes=102, alpha=0.2):
+        self.mixup = v2.MixUp(num_classes=num_classes, alpha=alpha)
 
-    batch_size = x.size()[0]
-    if use_cuda and torch.cuda.is_available():
-        index = torch.randperm(batch_size).cuda()
-    else:
-        index = torch.randperm(batch_size)
-
-    mixed_x = lam * x + (1 - lam) * x[index, :]
-    y_a, y_b = y, y[index]
-    return mixed_x, y_a, y_b, lam
+    def __call__(self, batch):
+        return self.mixup(*default_collate(batch))
