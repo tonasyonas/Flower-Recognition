@@ -1,0 +1,67 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage[numbers]{natbib}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{caption}
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+\title{\textbf{Advanced Few-Shot Flower Recognition:\\
+A Comparison of CNN Modifications, Regularization, and Visual Prompt Tuning}}
+\author{Jonas Tua \and Jia Ying Thor \and F Syed Abu Thahir}
+\date{NTU SC4001 Sem 2 2026 \\ \today}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+\includegraphics[width=0.5\textwidth]{figures/ntu-logo.png}\\
+\vspace{3cm}
+{\Huge\bfseries Advanced Few-Shot\\ Flower Recognition\par}
+\vspace{1cm}
+{\Large NTU SC4001 Sem 2 2026\par}
+\vspace{2cm}
+{\large Jonas Tua\qquad Jia Ying Thor\qquad F Syed Abu Thahir\par}
+\vspace{4cm}
+{\large \today\par}
+\end{titlepage}
+
+\input{sections/00-abstract}
+
+\section{Introduction}
+\input{sections/01-introduction}
+
+\section{Baseline: ResNet18 Transfer Learning}
+\input{sections/02-baseline}
+
+\section{Advanced Convolution Techniques}
+\input{sections/03-advanced-convolutions}
+
+\section{Regularization Techniques}
+\input{sections/04-regularization}
+
+\section{Scaling the Backbone: ResNet50}
+\input{sections/05-resnet50}
+
+\section{Visual Prompt Tuning}
+\input{sections/06-vpt}
+
+\section{Few-Shot Learning Analysis}
+\input{sections/07-fewshot}
+
+\section{Discussion}
+\input{sections/08-discussion}
+
+\section{Conclusion}
+\input{sections/09-conclusion}
+
+\bibliographystyle{unsrtnat}
+\bibliography{bibliography}
+
+\end{document}
