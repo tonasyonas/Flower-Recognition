@@ -1,0 +1,42 @@
+Flower classification benefits from features at multiple spatial scales: petal shape requires local geometry, while overall arrangement requires a wider receptive field. We test whether replacing the standard $3 \times 3$ convolution with a more expressive operator helps ResNet18 learn better features for this task. All variants in this section preserve the pre-trained weights by copying them into the new operator where the shapes allow.
+
+\subsection{Dilated Convolution}
+Dilated convolution \citep{yu2016dilated} inserts zeros between kernel weights, enlarging the receptive field without adding parameters. A $k \times k$ kernel with dilation rate $d$ has effective receptive field
+\[
+  RF = k + (k-1)(d-1).
+\]
+We replace every $3 \times 3$ convolution in \texttt{layer3} and \texttt{layer4} with a dilation-2 version and copy the pre-trained weights into the new layer (the weight tensor shape is unchanged).
+
+\subsection{Deformable Convolution}
+Deformable convolution \citep{dai2017deformable} learns a per-pixel offset $\Delta p$ for each kernel position, shifting the sampling grid to follow object geometry. We implement the v1 variant with \texttt{torchvision.ops.deform\_conv2d}. A small auxiliary convolution predicts the offsets, initialised to zero so that the module starts as a standard convolution. As with dilation, we copy pre-trained weights into the main kernel and only the offset predictor is new. We apply this to the first $3 \times 3$ convolution in each BasicBlock of \texttt{layer3} and \texttt{layer4}.
+
+\subsection{Depthwise-Separable Convolution}
+Depthwise-separable convolution \citep{howard2017mobilenets} factors a standard convolution into a depthwise spatial filter (one kernel per channel) followed by a pointwise $1 \times 1$ mixing. This cuts the parameter count from $C_{\text{in}} \cdot C_{\text{out}} \cdot k^2$ to $C_{\text{in}} \cdot k^2 + C_{\text{in}} \cdot C_{\text{out}}$. We replace every $3 \times 3$ convolution in \texttt{layer2}, \texttt{layer3}, and \texttt{layer4}. The weight shapes change, so pre-trained initialisation is not possible.
+
+\subsection{Novel Hybrid: Dilated + Deformable}
+We combine the two strategies that preserve pre-trained weights. Dilated convolutions go in \texttt{layer3} (wider receptive field at mid-level features), and deformable convolutions go in \texttt{layer4} (input-adaptive sampling at the highest semantic level). To our knowledge, this specific combination has not been reported in the flower classification literature.
+
+\subsection{Results and Analysis}
+All four variants underperform the baseline (Table~\ref{tab:main-results}). The best of the four is deformable convolution at 83.46\% MPC accuracy (baseline: 86.11\%); the worst is depthwise-separable at 59.71\%. The hybrid variant (81.34\%) falls between dilated (78.53\%) and deformable, without outperforming either component alone.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Method & MPC Acc (\%) & Test Acc (\%) \\
+\midrule
+Baseline (unmodified) & \textbf{86.11} & \textbf{84.42} \\
++ Deformable conv     & 83.46 & 81.33 \\
++ Hybrid (dilated+deformable) & 81.34 & 78.73 \\
++ Dilated conv        & 78.53 & 75.95 \\
++ Depthwise-separable & 59.71 & 57.03 \\
+\bottomrule
+\end{tabular}
+\caption{Advanced convolution techniques on ResNet18. None match the unmodified baseline.}
+\label{tab:conv-results}
+\end{table}
+
+Three factors explain this outcome. First, the pre-trained weights were learned for standard convolution; replacing the operator introduces a mismatch between the weights and the computation. Dilation spreads the kernel sampling across a wider region, which the original weights were not calibrated for. Second, the offset predictor in deformable convolution starts at zero and gradually learns useful displacements, but with only 1020 training images it never gets a strong enough signal. Third, depthwise-separable convolution simply cannot reuse the pre-trained weights (different tensor shape), so it starts from scratch and fails to make up the gap in 50 epochs.
+
+Our novel hybrid does not beat either component. The signal we take from this section is that modifying the convolutional operator is the wrong lever to pull when pre-trained features are strong and training data is scarce.
