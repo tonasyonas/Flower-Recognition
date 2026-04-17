@@ -1,0 +1,7 @@
+We compared three families of adaptation on Oxford Flowers 102: architectural modification (dilated, deformable, depthwise-separable, hybrid convolutions), training-time regularization (frozen layers, label smoothing, MixUp, strong augmentation), and parameter-efficient tuning (Visual Prompt Tuning, shallow and deep). Across 13 training runs and a few-shot sweep at $k \in \{1, 2, 5, 10\}$, VPT-Deep came out ahead, reaching 92.83\% mean per-class accuracy on the test set while updating only 0.2\% of the backbone parameters.
+
+The central finding is that fine-grained classification with limited data rewards parameter efficiency more than architectural cleverness. Modifying the convolutional operator consistently hurt performance. The most useful thing we did to the CNN was freeze its early layers, which is the same logic that drives VPT to its extreme: do not touch the pre-trained weights at all.
+
+Two results surprised us. MixUp, a near-default regularizer in modern image classification, dropped accuracy by 2.6 points at ten shots per class because mixing rarely preserves class-discriminative information at that data scale. Scaling the backbone from ResNet18 to ResNet50 gave a smaller gain than simply freezing the first two layers of the smaller model, which argues that capacity is not the bottleneck.
+
+Future work would integrate triplet loss into the VPT recipe, test VPT at larger prompt lengths with longer training, and measure variance across random seeds. The main limitation of this report is that every number reflects a single run.
