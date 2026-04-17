@@ -87,6 +87,8 @@ def main():
                         help='Label smoothing factor (0=disabled, 0.1=recommended)')
     parser.add_argument('--strong_aug', action='store_true',
                         help='Use stronger augmentation (RandomResizedCrop, ColorJitter)')
+    parser.add_argument('--num_prompts', type=int, default=10,
+                        help='Number of visual prompts (for VPT models only)')
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -106,9 +108,13 @@ def main():
     if args.strong_aug:
         print("Strong augmentation enabled (RandomResizedCrop, ColorJitter)")
 
-    # Model
+    # Model (VPT models accept num_prompts kwarg)
     model_cls = MODEL_REGISTRY[args.model]
-    model = model_cls(num_classes=102).to(device)
+    is_vpt = args.model.startswith('vpt_')
+    if is_vpt:
+        model = model_cls(num_classes=102, num_prompts=args.num_prompts).to(device)
+    else:
+        model = model_cls(num_classes=102).to(device)
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Trainable parameters: {trainable:,}")
 
@@ -133,7 +139,8 @@ def main():
     mixup_suffix = f'_mixup{args.mixup}' if args.mixup > 0 else ''
     ls_suffix = f'_ls{args.label_smoothing}' if args.label_smoothing > 0 else ''
     aug_suffix = '_strongaug' if args.strong_aug else ''
-    exp_name = f'{args.model}{shot_suffix}{mixup_suffix}{ls_suffix}{aug_suffix}'
+    prompt_suffix = f'_p{args.num_prompts}' if is_vpt and args.num_prompts != 10 else ''
+    exp_name = f'{args.model}{shot_suffix}{mixup_suffix}{ls_suffix}{aug_suffix}{prompt_suffix}'
     log_path = f'results/logs/{exp_name}_training_log.csv'
     checkpoint_path = f'results/checkpoints/best_{exp_name}.pth'
 
