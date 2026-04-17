@@ -22,3 +22,11 @@ data/*
 Thumbs.db
 .claude/
 notebooks/data/
+main.pdf
+report/main.aux
+report/main.log
+report/main.bbl
+report/main.blg
+report/main.fls
+report/main.fdb_latexmk
+report/main.out
