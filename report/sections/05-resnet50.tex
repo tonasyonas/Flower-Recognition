@@ -1,0 +1,6 @@
+Does a bigger backbone help? We swap ResNet18 (11.2M parameters) for ResNet50 (23.7M) and fine-tune the full network under the same recipe as the baseline. ResNet50 has been reported to reach 91--97\% on Flowers 102 in recent work, often with additional tricks.
+
+\subsection{Results and Analysis}
+ResNet50 reaches 88.07\% MPC accuracy on the test set, only two points above our ResNet18 baseline and well below the frozen-layers ResNet18 (90.82\%). The gain from doubling the parameter count is smaller than the gain from simply freezing the first two layers of a smaller model.
+
+We read this as evidence that the ten-shot Flowers 102 budget is too small to exploit the extra capacity of ResNet50. The larger model has more parameters to overfit, and our training recipe does not include the aggressive augmentation or longer schedules that reported high ResNet50 numbers typically rely on. Scaling up the backbone is not cost-free on this dataset.
