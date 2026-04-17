@@ -1,0 +1,49 @@
+The baseline overfits (100\% train accuracy, 86\% MPC test accuracy). If the bottleneck is overfitting rather than architecture, regularization should help. We test four regularizers while keeping the ResNet18 architecture fixed.
+
+\subsection{Freezing Early Layers}
+The pre-trained weights in \texttt{layer1} and \texttt{layer2} encode low-level features (edges, textures) that transfer well across datasets. Freezing them reduces the trainable parameter count from 11.2M to 10.5M and prevents the low-level features from drifting during fine-tuning. Only \texttt{layer3}, \texttt{layer4}, and the classifier head receive gradient updates.
+
+\subsection{Label Smoothing}
+Label smoothing \citep{szegedy2016rethinking} replaces the one-hot target $y$ with a softened target
+\[
+  \tilde{y}_i = (1-\alpha) \cdot y_i + \alpha / K,
+\]
+where $K$ is the number of classes. We set $\alpha = 0.1$. This prevents the logits from growing arbitrarily large and reduces overconfidence on the training set. We change one line: \texttt{nn.CrossEntropyLoss(label\_smoothing=0.1)}.
+
+\subsection{MixUp Augmentation}
+MixUp \citep{zhang2018mixup} trains on convex combinations of image and label pairs:
+\[
+  \tilde{x} = \lambda x_i + (1-\lambda) x_j, \qquad \tilde{y} = \lambda y_i + (1-\lambda) y_j,
+\]
+with $\lambda \sim \text{Beta}(\alpha, \alpha)$. We use the official \texttt{torchvision.transforms.v2.MixUp} implementation via a DataLoader \texttt{collate\_fn} with $\alpha = 0.2$.
+
+\subsection{Stronger Data Augmentation}
+The default augmentation pipeline is mild (horizontal flip plus small rotation). We also train with a stronger pipeline: \texttt{RandomResizedCrop(scale=(0.6, 1.0))} and \texttt{ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)}.
+
+\subsection{Results and Analysis}
+Table~\ref{tab:reg-results} shows that three of four regularizers help, but only marginally, and one (MixUp) actively hurts.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Method & MPC Acc (\%) & $\Delta$ vs.\ baseline \\
+\midrule
+Frozen layer1+2       & \textbf{90.82} & +4.71 \\
+Label smoothing ($\alpha{=}0.1$) & 89.40 & +3.29 \\
+Label smoothing + strong aug & 88.24 & +2.13 \\
+Baseline              & 86.11 & --- \\
+Strong aug only       & 86.11 & +0.00 \\
+MixUp ($\alpha{=}0.2$) & 83.50 & $-2.61$ \\
+\bottomrule
+\end{tabular}
+\caption{Regularization techniques on ResNet18.}
+\label{tab:reg-results}
+\end{table}
+
+Freezing the first two layers gives the largest gain and pushes MPC accuracy to 90.82\%, a 4.7-point improvement at the cost of only 6\% fewer trainable parameters. Label smoothing adds another useful 3 points on top of the baseline, though combining it with strong augmentation does worse than label smoothing alone, suggesting the two tools compete for the same regularization budget.
+
+MixUp is the surprise. In most image classification settings it improves generalisation, but here it drops MPC accuracy by 2.6 points. We suspect two reasons. With ten images per class and 102 classes, many mixed pairs span visually unrelated species, and the resulting soft labels provide little discriminative signal. And the model already overfits on unmixed examples, so spending capacity to memorise blends leaves less for the clean examples at test time. Stronger augmentation on its own gives the same MPC accuracy as the baseline, which we read as the dataset already being tolerant to mild geometric variation.
+
+The pattern in this section points in the same direction as \S3: the most useful thing we did was \emph{not train} part of the network (freezing layer1 and layer2). This primes the argument for Visual Prompt Tuning, which is the extreme version of the same idea.
