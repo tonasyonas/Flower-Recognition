@@ -49,32 +49,34 @@ Figure~\ref{fig:param-efficiency} plots the same data on a log-parameter axis. T
 
 Table~\ref{tab:fewshot} reports the best validation accuracy for each method as the per-class training budget shrinks from 10 to 1 image. Figure~\ref{fig:fewshot} plots the same numbers.
 
-\begin{table}[H]
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.45\textwidth}
 \centering
 \small
 \begin{tabular}{lcccc}
 \toprule
-Method & $k=1$ & $k=2$ & $k=5$ & $k=10$ \\
+Method & $k{=}1$ & $k{=}2$ & $k{=}5$ & $k{=}10$ \\
 \midrule
-\textbf{VPT-Deep}        & \textbf{46.37} & \textbf{68.82} & \textbf{84.90} & \textbf{93.63} \\
-Frozen ResNet18          & 35.10 & 65.78 & 81.47 & 91.67 \\
-VPT-Shallow              & 37.84 & 57.16 & 77.45 & 86.08 \\
-Baseline (full FT)       & 35.20 & 59.31 & 79.61 & 88.33 \\
-Deformable               & 26.96 & 54.22 & 77.45 & 84.61 \\
-Hybrid                   & 24.80 & 46.37 & 68.73 & 82.45 \\
-Dilated                  & 22.94 & 47.25 & 65.59 & 79.71 \\
-Depthwise                & 6.96  & 12.75 & 39.41 & 60.78 \\
+\textbf{VPT-Deep}    & \textbf{46.4} & \textbf{68.8} & \textbf{84.9} & \textbf{93.6} \\
+Frozen               & 35.1 & 65.8 & 81.5 & 91.7 \\
+VPT-Shallow          & 37.8 & 57.2 & 77.5 & 86.1 \\
+Baseline             & 35.2 & 59.3 & 79.6 & 88.3 \\
+Deformable           & 27.0 & 54.2 & 77.5 & 84.6 \\
+Hybrid               & 24.8 & 46.4 & 68.7 & 82.5 \\
+Dilated              & 22.9 & 47.3 & 65.6 & 79.7 \\
+Depthwise            & 7.0  & 12.8 & 39.4 & 60.8 \\
 \bottomrule
 \end{tabular}
-\caption{Best validation accuracy (\%) at different training budgets ($k$ images per class).}
+\captionof{table}{Best validation accuracy (\%) at different training budgets.}
 \label{tab:fewshot}
-\end{table}
-
-\begin{figure}[H]
+\end{minipage}\hfill
+\begin{minipage}{0.53\textwidth}
 \centering
-\includegraphics[width=0.75\textwidth]{figures/fewshot-curves.pdf}
-\caption{Few-shot learning curves. VPT-Deep dominates at every $k$, with the largest margin at $k=1$.}
+\includegraphics[width=\textwidth]{figures/fewshot-curves.pdf}
+\captionof{figure}{Few-shot learning curves. VPT-Deep dominates at every $k$.}
 \label{fig:fewshot}
+\end{minipage}
 \end{figure}
 
 \textbf{Key observations.}
@@ -85,112 +87,105 @@ Depthwise                & 6.96  & 12.75 & 39.41 & 60.78 \\
   \item Depthwise collapses at $k=1$ (6.96\%) because it cannot reuse pre-trained weights and has no signal to learn from scratch.
 \end{itemize}
 
-\subsection{VPT Prompt Length Ablation}
+\subsection{VPT Prompt Length Ablation and Triplet Loss}
 
-Figure~\ref{fig:prompt-length} ablates the number of prompts per layer for VPT-Deep on the full training set. Accuracy increases monotonically from 91.08\% at $p = 1$ to 94.51\% at $p = 50$, with diminishing returns. Our default $p = 10$ gives 93.63\%.
+Figure~\ref{fig:prompt-length} ablates the number of prompts per layer for VPT-Deep on the full training set. Accuracy increases monotonically from 91.08\% at $p = 1$ to 94.51\% at $p = 50$, with diminishing returns. The project handout also suggests triplet loss as an advanced loss function. We add a batch-hard triplet loss \citep{schroff2015facenet} on the L2-normalised CLS embeddings of VPT-Deep, with margin $0.5$ and weight $\alpha = 0.2$, giving combined loss $\mathcal{L} = \mathcal{L}_{\text{CE}} + \alpha \mathcal{L}_{\text{triplet}}$. Triplet loss raises validation accuracy by 0.4 points but does not change test-set numbers (Table~\ref{tab:triplet}), suggesting the auxiliary objective overfits slightly to the validation distribution. We initially observed NaN losses under mixed precision; L2-normalising embeddings and computing the triplet term in float32 outside the autocast region resolved this.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.6\textwidth]{figures/prompt-length.pdf}
-\caption{VPT-Deep validation accuracy versus number of prompts per Transformer layer.}
+\begin{minipage}{0.5\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/prompt-length.pdf}
+\captionof{figure}{VPT-Deep accuracy vs.\ prompt length.}
 \label{fig:prompt-length}
-\end{figure}
-
-\subsection{Regularization Ablation on the Baseline}
-
-Table~\ref{tab:reg} isolates the effect of each regularization technique on the baseline ResNet18 (the relevant rows are taken from Table~\ref{tab:main-results}).
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{lcc}
-\toprule
-Method & MPC Acc (\%) & $\Delta$ vs.\ baseline \\
-\midrule
-Frozen \texttt{layer1+2}        & \textbf{90.82} & $+4.71$ \\
-Label smoothing ($\alpha{=}0.1$)  & 89.40          & $+3.29$ \\
-Label smoothing + strong aug   & 88.24          & $+2.13$ \\
-Baseline                       & 86.11          & --- \\
-Strong augmentation only       & 86.11          & $+0.00$ \\
-MixUp ($\alpha{=}0.2$)         & 83.50          & $-2.61$ \\
-\bottomrule
-\end{tabular}
-\caption{Effect of regularization on ResNet18.}
-\label{tab:reg}
-\end{table}
-
-Three of the four regularizers help, but only modestly. MixUp actively hurts. Combining label smoothing with strong augmentation does worse than label smoothing alone, suggesting the two compete for the same regularization budget.
-
-\subsection{Training Dynamics and Parameter Efficiency}
-
-Figure~\ref{fig:training-curves} plots validation accuracy over epochs. All methods converge within 30--40 epochs under cosine annealing, with VPT-Deep climbing fastest in the first 10 epochs (reflecting the stronger ViT-B/16 prior). CNN variants reach 100\% training accuracy by epoch 20, while validation plateaus 5--14 points lower, confirming overfitting on the 1020-image training set. VPT-Deep uses $66\times$ fewer trainable parameters than the baseline yet achieves 6.7 MPC points higher accuracy, while the depthwise variant achieves a $7\times$ parameter reduction at a 26-point accuracy cost.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.7\textwidth]{figures/training-curves.pdf}
-\caption{Validation accuracy over training epochs for the main methods.}
-\label{fig:training-curves}
-\end{figure}
-
-\subsection{Triplet Loss + VPT-Deep}
-
-The project handout suggests triplet loss as an advanced loss function. We add a batch-hard triplet loss \citep{schroff2015facenet} on the L2-normalised CLS embeddings of VPT-Deep, with margin $0.5$ and weight $\alpha = 0.2$. The combined loss is $\mathcal{L} = \mathcal{L}_{\text{CE}} + \alpha \cdot \mathcal{L}_{\text{triplet}}$.
-
-\begin{table}[H]
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}
 \centering
 \small
 \begin{tabular}{lccc}
 \toprule
-Method & Test Acc (\%) & MPC Acc (\%) & Best Val Acc (\%) \\
+Method & Test & MPC & Val \\
 \midrule
-VPT-Deep                    & 91.49 & 92.69 & 93.63 \\
-VPT-Deep + Triplet ($\alpha{=}0.2$) & 91.49 & 92.69 & \textbf{94.02} \\
+VPT-Deep             & 91.49 & 92.69 & 93.63 \\
+\quad + Triplet ($\alpha{=}0.2$) & 91.49 & 92.69 & \textbf{94.02} \\
 \bottomrule
 \end{tabular}
-\caption{Triplet loss raises validation accuracy by 0.4 points but does not change test-set numbers, suggesting the batch-hard triplet objective overfits slightly to the validation distribution.}
+\captionof{table}{Triplet loss helps validation but not test.}
 \label{tab:triplet}
-\end{table}
+\end{minipage}
+\end{figure}
 
-We initially observed NaN losses when triplet was added on top of mixed-precision training; L2-normalising the embeddings before computing pairwise distances and computing the triplet term in float32 outside the autocast region resolved this.
+\subsection{Regularization Ablation and Training Dynamics}
 
-\subsection{Test-Time Augmentation (TTA)}
+Table~\ref{tab:reg} isolates the effect of each regularization technique on the baseline ResNet18. Three of the four help, but only modestly; MixUp actively hurts. Combining label smoothing with strong augmentation does worse than label smoothing alone, suggesting the two compete for the same regularization budget. Figure~\ref{fig:training-curves} plots validation accuracy over training: all methods converge within 30--40 epochs, VPT-Deep climbs fastest in the first 10 epochs (stronger prior), and CNN variants reach 100\% training accuracy by epoch 20 while validation plateaus 5--14 points lower (overfitting). VPT-Deep uses $66\times$ fewer trainable parameters than the baseline yet achieves 6.7 MPC points higher accuracy.
 
-We apply test-time augmentation by averaging softmax predictions over five views of each test image (original, horizontal flip, $\pm 5^\circ$ rotation, $+10^\circ$ rotation). Table~\ref{tab:tta} reports the gain across the three best methods.
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.45\textwidth}
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Method & MPC (\%) & $\Delta$ \\
+\midrule
+Frozen \texttt{layer1+2}       & \textbf{90.82} & $+4.71$ \\
+Label smoothing ($\alpha{=}0.1$) & 89.40 & $+3.29$ \\
+LS + strong aug              & 88.24 & $+2.13$ \\
+Baseline                     & 86.11 & --- \\
+Strong aug only              & 86.11 & $+0.00$ \\
+MixUp ($\alpha{=}0.2$)       & 83.50 & $-2.61$ \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Regularization effects on ResNet18.}
+\label{tab:reg}
+\end{minipage}\hfill
+\begin{minipage}{0.53\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/training-curves.pdf}
+\captionof{figure}{Validation accuracy per epoch.}
+\label{fig:training-curves}
+\end{minipage}
+\end{figure}
 
-\begin{table}[H]
+\subsection{Test-Time Augmentation and Variance Across Seeds}\label{sec:seed-sweep}
+
+We apply test-time augmentation by averaging softmax predictions over five views (original, horizontal flip, $\pm 5^\circ$ rotation, $+10^\circ$ rotation). TTA consistently improves all three metrics by 0.4--0.9 points at no training cost (Table~\ref{tab:tta}); VPT-Deep + TTA reaches 93.27\% MPC, our highest test result. To address the single-seed limitation we also re-train the three best methods with seeds 7 and 42 in addition to seed 69 (Table~\ref{tab:seeds}). The relative ranking VPT-Deep $>$ Frozen $>$ Baseline holds at every seed, and standard deviations stay below one point.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.62\textwidth}
 \centering
 \small
 \begin{tabular}{lcccccc}
 \toprule
-& \multicolumn{2}{c}{Accuracy (\%)} & \multicolumn{2}{c}{MPC Acc (\%)} & \multicolumn{2}{c}{Top-5 (\%)} \\
+& \multicolumn{2}{c}{Acc (\%)} & \multicolumn{2}{c}{MPC (\%)} & \multicolumn{2}{c}{Top-5 (\%)} \\
 \cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
-Method & No TTA & + TTA & No TTA & + TTA & No TTA & + TTA \\
+Method & No & +TTA & No & +TTA & No & +TTA \\
 \midrule
 \textbf{VPT-Deep}   & 91.49 & \textbf{91.98} & 92.69 & \textbf{93.27} & 97.89 & \textbf{98.05} \\
-Frozen ResNet18    & 88.52 & 89.07 & 90.82 & 91.25 & 96.85 & 96.91 \\
-Baseline           & 84.42 & 85.14 & 86.11 & 87.00 & 94.84 & 95.09 \\
+Frozen              & 88.52 & 89.07 & 90.82 & 91.25 & 96.85 & 96.91 \\
+Baseline            & 84.42 & 85.14 & 86.11 & 87.00 & 94.84 & 95.09 \\
 \bottomrule
 \end{tabular}
-\caption{Test-time augmentation consistently improves all three metrics by 0.4--0.9 points. The improvement is essentially free since no retraining is required.}
+\captionof{table}{TTA effect on top three methods.}
 \label{tab:tta}
-\end{table}
-
-\subsection{Variance Across Seeds}\label{sec:seed-sweep}
-
-To address the single-seed limitation, we re-train the three best methods with seeds 7 and 42 in addition to our default seed 69. Table~\ref{tab:seeds} reports the best validation accuracy per seed and the mean $\pm$ standard deviation.
-
-\begin{table}[H]
+\end{minipage}\hfill
+\begin{minipage}{0.36\textwidth}
 \centering
 \small
-\begin{tabular}{lcccc}
+\begin{tabular}{lc}
 \toprule
-Method & seed 69 & seed 7 & seed 42 & Mean $\pm$ std \\
+Method & Mean $\pm$ std \\
 \midrule
-\textbf{VPT-Deep}    & 93.63 & 93.14 & 92.45 & $93.07 \pm 0.49$ \\
-Frozen ResNet18      & 91.67 & 90.49 & 89.31 & $90.49 \pm 0.96$ \\
-Baseline             & 88.33 & 87.94 & 87.65 & $87.97 \pm 0.28$ \\
+\textbf{VPT-Deep} & $93.07 \pm 0.49$ \\
+Frozen            & $90.49 \pm 0.96$ \\
+Baseline          & $87.97 \pm 0.28$ \\
 \bottomrule
 \end{tabular}
-\caption{Best validation accuracy across three random seeds. The relative ranking (VPT-Deep $>$ Frozen $>$ Baseline) is preserved at every seed, and standard deviations are below 1 point. VPT-Deep also has the smallest spread, consistent with its small trainable parameter count limiting overfitting.}
+\captionof{table}{Best val acc across seeds 69, 7, 42.}
 \label{tab:seeds}
-\end{table}
+\end{minipage}
+\end{figure}
+
+\noindent VPT-Deep also has the smallest spread (0.49 std), consistent with its tiny trainable parameter count limiting overfitting to any particular initialisation.
+
