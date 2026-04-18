@@ -9,26 +9,37 @@
 \usepackage{xcolor}
 \usepackage{float}
 \usepackage{caption}
-\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
 
-\title{\textbf{Advanced Few-Shot Flower Recognition:\\
-A Comparison of CNN Modifications, Regularization, and Visual Prompt Tuning}}
-\author{Jonas Tua \and Jia Ying Thor \and F Syed Abu Thahir}
-\date{NTU SC4001 Sem 2 2026 \\ \today}
+% Consistent caption styling: tables get caption above, figures below.
+\captionsetup[table]{position=above, skip=4pt, font=small}
+\captionsetup[figure]{position=below, skip=4pt, font=small}
+
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
 
 \begin{document}
 
 \begin{titlepage}
 \centering
-\vspace*{2cm}
-\IfFileExists{figures/ntu-logo.png}{\includegraphics[width=0.5\textwidth]{figures/ntu-logo.png}\\}{}
-\vspace{3cm}
-{\Huge\bfseries Advanced Few-Shot\\ Flower Recognition\par}
-\vspace{1cm}
+\vspace*{1cm}
+\IfFileExists{figures/ntu-logo.png}{\includegraphics[width=0.4\textwidth]{figures/ntu-logo.png}\\[2cm]}{\vspace{3cm}}
+
+{\Huge\bfseries Advanced Few-Shot\\[0.3cm] Flower Recognition\par}
+\vspace{0.6cm}
+{\large\itshape A Comparison of CNN Modifications, Regularization,\\ and Visual Prompt Tuning\par}
+
+\vspace{2.5cm}
 {\Large NTU SC4001 Sem 2 2026\par}
-\vspace{2cm}
-{\large Jonas Tua\qquad Jia Ying Thor\qquad F Syed Abu Thahir\par}
-\vspace{4cm}
+\vspace{0.4cm}
+{\large Neural Networks and Deep Learning\par}
+
+\vspace{2.5cm}
+\begin{tabular}{c}
+{\large Jonas Tua} \\
+{\large Jia Ying Thor} \\
+{\large F Syed Abu Thahir} \\
+\end{tabular}
+
+\vfill
 {\large \today\par}
 \end{titlepage}
 

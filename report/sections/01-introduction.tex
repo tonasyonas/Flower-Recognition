@@ -8,26 +8,14 @@ CNNs and Vision Transformers (ViTs) do well on large datasets, but it is less ob
 
 \subsection{Approach Overview}
 
-We compare three families of adaptation under a single shared training recipe (AdamW, cosine annealing, 50 epochs, batch size 32) so that any difference in performance is attributable to the method itself:
+We compare three families of adaptation under a single shared training recipe (AdamW, cosine annealing, 50 epochs, batch size 32) so that any difference in performance is attributable to the method itself. On the CNN side, we train five ResNet18 variants (a baseline plus four advanced convolutional modifications: dilated, deformable, depthwise-separable, and our novel hybrid that combines dilated and deformable layers), four regularization strategies on top of the baseline (freezing early layers, label smoothing, MixUp, stronger image augmentation), and a larger ResNet50 to test whether more capacity helps. On the Transformer side, we train Visual Prompt Tuning \citep{jia2022vpt} on a ViT-B/16 backbone in both Shallow and Deep configurations.
 
-\begin{itemize}
-  \item \textbf{Five ResNet18 variants}: a baseline plus four advanced convolutional modifications (dilated, deformable, depthwise-separable, and our novel hybrid combining dilated and deformable layers).
-  \item \textbf{Four regularization strategies} on top of the ResNet18 baseline: freezing early layers, label smoothing, MixUp, and stronger image augmentation.
-  \item \textbf{A larger CNN backbone} (ResNet50) to test whether more capacity helps.
-  \item \textbf{Visual Prompt Tuning (VPT)} on a ViT-B/16 backbone, in both Shallow and Deep configurations \citep{jia2022vpt}.
-\end{itemize}
-
-We measure accuracy, mean per-class accuracy, and top-5 accuracy on the test set. We also rerun every method at $k = 1, 2, 5$ images per class to see how it degrades. Two questions drive the work: does architectural complexity actually help in the few-shot regime, and can parameter-efficient tuning match or beat full fine-tuning on a fine-grained task?
+We measure accuracy, mean per-class accuracy, and top-5 accuracy on the test set, and rerun every method at $k = 1, 2, 5$ images per class to see how it degrades. Two questions drive the work: does architectural complexity actually help in the few-shot regime, and can parameter-efficient tuning match or beat full fine-tuning on a fine-grained task?
 
 \subsection{Training and Evaluation Setup}
 
 We use the canonical \texttt{torchvision.datasets.Flowers102} split: 1020 training images, 1020 validation images, and 6149 test images. Images are resized to $224 \times 224$ and normalised with ImageNet statistics. The training transform applies a random horizontal flip and rotation up to 15 degrees.
 
-We report three test-set metrics:
-\begin{itemize}
-  \item \textbf{Accuracy}: overall correct predictions over all samples.
-  \item \textbf{Mean per-class accuracy (MPC)}: average per-class recall, our primary metric following \citet{nilsback2008}. The test set is class-imbalanced (20 to 258 images per class), so this corrects for class frequency.
-  \item \textbf{Top-5 accuracy}: fraction of samples where the true class appears in the top-5 predictions.
-\end{itemize}
+We report three test-set metrics: \emph{accuracy} is overall correct predictions over all samples, \emph{mean per-class accuracy} (MPC) is the average of per-class recall (our primary metric, following \citet{nilsback2008}, since the test set is class-imbalanced from 20 to 258 images per class), and \emph{top-5 accuracy} is the fraction of samples where the true class appears in the top-5 predictions.
 
 Unless stated otherwise, every model trains for 50 epochs with AdamW ($\text{lr} = 10^{-3}$), cosine annealing, batch size 32, automatic mixed precision, and seed 69. Experiments run on a single NVIDIA RTX 3070 Ti.

@@ -4,25 +4,35 @@ We use the canonical Oxford Flowers 102 split \citep{nilsback2008}: 1020 trainin
 
 \subsection{CNN Architectures}
 
-All seven CNN configurations start from a ResNet pre-trained on ImageNet-1k. We replace the original classifier with a 102-class linear head. Wherever we modify a layer, we copy the pre-trained weights into the new layer when the kernel shape allows.
+All seven CNN configurations start from a ResNet pre-trained on ImageNet-1k. We replace the original classifier with a 102-class linear head. Wherever we modify a layer, we copy the pre-trained weights into the new layer when the kernel shape allows. Table~\ref{tab:cnn-arch} summarises the seven configurations.
 
-\begin{itemize}
-  \item \textbf{Baseline (ResNet18).} Full fine-tuning of all 11.2M parameters, the reference for every other configuration.
-  \item \textbf{Dilated.} Replaces $3 \times 3$ convolutions in \texttt{layer3} and \texttt{layer4} with dilation-2 versions, doubling the receptive field without adding parameters.
-  \item \textbf{Deformable.} Replaces the first $3 \times 3$ convolution in each BasicBlock of \texttt{layer3} and \texttt{layer4} with \texttt{torchvision.ops.deform\_conv2d}. A small offset branch (initialised to zero) predicts $2 \cdot k^2$ offsets per spatial location.
-  \item \textbf{Depthwise.} Replaces every $3 \times 3$ convolution in \texttt{layer2}--\texttt{layer4} with depthwise-separable convolutions, dropping trainable parameters from 11.2M to 1.6M. The kernel shape changes, so pre-trained weights are not copied.
-  \item \textbf{Hybrid (novel).} Dilated convolutions in \texttt{layer3} combined with deformable convolutions in \texttt{layer4}.
-  \item \textbf{Frozen.} ResNet18 with \texttt{layer1} and \texttt{layer2} weights frozen, leaving 10.5M trainable parameters.
-  \item \textbf{ResNet50.} A larger backbone (23.7M parameters) trained under the same recipe as the ResNet18 baseline.
-\end{itemize}
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{p{2.5cm}p{11cm}}
+\toprule
+Configuration & Description \\
+\midrule
+Baseline (ResNet18) & Full fine-tuning of all 11.2M parameters; the reference for every other configuration. \\
+Dilated & Replaces $3 \times 3$ convolutions in \texttt{layer3} and \texttt{layer4} with dilation-2 versions, doubling the receptive field without adding parameters. \\
+Deformable & Replaces the first $3 \times 3$ convolution in each BasicBlock of \texttt{layer3} and \texttt{layer4} with \texttt{deform\_conv2d}. A small offset branch (initialised to zero) predicts $2 \cdot k^2$ offsets per spatial location. \\
+Depthwise & Replaces every $3 \times 3$ convolution in \texttt{layer2}--\texttt{layer4} with depthwise-separable convolutions, dropping trainable parameters from 11.2M to 1.6M. The kernel shape changes, so pre-trained weights are not copied. \\
+Hybrid (novel) & Dilated convolutions in \texttt{layer3} combined with deformable convolutions in \texttt{layer4}. \\
+Frozen & ResNet18 with \texttt{layer1} and \texttt{layer2} weights frozen, leaving 10.5M trainable parameters. \\
+ResNet50 & A larger backbone (23.7M parameters) trained under the same recipe as the ResNet18 baseline. \\
+\bottomrule
+\end{tabular}
+\caption{The seven CNN configurations evaluated.}
+\label{tab:cnn-arch}
+\end{table}
 
 \subsection{Visual Prompt Tuning}
 
-We implement VPT on a frozen ViT-B/16 (86M backbone parameters) using \texttt{torchvision}'s pre-trained weights. \textbf{VPT-Shallow} inserts 10 learnable prompt tokens at the first Transformer layer only, so the input becomes $[x_0, P, E_0]$ where $P \in \mathbb{R}^{10 \times 768}$. Subsequent layers see $[x_i, Z_i, E_i]$ unchanged. Only $P$ and the 102-way head are trained (86,118 parameters total). \textbf{VPT-Deep} inserts a fresh set of 10 prompts at the input of every Transformer layer, with prompts from the previous layer discarded at each step. Trainable parameter count is 170,598, or 0.2\% of the backbone. Both variants use truncated-normal initialisation ($\sigma = 0.02$) for the prompts.
+We implement VPT on a frozen ViT-B/16 (86M backbone parameters) using \texttt{torchvision}'s pre-trained weights. VPT-Shallow inserts 10 learnable prompt tokens at the first Transformer layer only, so the input becomes $[x_0, P, E_0]$ where $P \in \mathbb{R}^{10 \times 768}$. Subsequent layers see $[x_i, Z_i, E_i]$ unchanged. Only $P$ and the 102-way head are trained (86,118 parameters total). VPT-Deep inserts a fresh set of 10 prompts at the input of every Transformer layer, with prompts from the previous layer discarded at each step. Trainable parameter count is 170,598, or 0.2\% of the backbone. Both variants use truncated-normal initialisation ($\sigma = 0.02$) for the prompts.
 
 \subsection{Training and Augmentation}
 
-Unless stated otherwise, every model trains for 50 epochs (30 for few-shot) with AdamW ($\text{lr} = 10^{-3}$), CosineAnnealingLR ($T_{\max}$ = epochs), batch size 32, mixed precision (\texttt{torch.amp}), Cross-Entropy loss, and seed 69. Standard augmentation is the resize/flip/rotation pipeline described above. The optional \emph{strong} pipeline replaces it with \texttt{RandomResizedCrop(scale=(0.6, 1.0))} and \texttt{ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)}. \emph{MixUp} ($\alpha = 0.2$) is applied through the official \texttt{torchvision.transforms.v2.MixUp} integrated into a multi-worker-safe collate function.
+Unless stated otherwise, every model trains for 50 epochs (30 for few-shot) with AdamW ($\text{lr} = 10^{-3}$), cosine annealing ($T_{\max}$ = epochs), batch size 32, mixed precision, Cross-Entropy loss, and seed 69. Standard augmentation is the resize, flip, and rotation pipeline described above. The optional strong pipeline replaces it with random resized cropping (scale 0.6 to 1.0) and colour jitter (brightness, contrast, and saturation 0.2; hue 0.1). MixUp ($\alpha = 0.2$) is applied through the official \texttt{torchvision v2.MixUp} integrated into a multi-worker-safe collate function.
 
 \subsection{Few-Shot Protocol}
 

@@ -137,7 +137,7 @@ MixUp ($\alpha{=}0.2$)       & 83.50 & $-2.61$ \\
 
 \subsection{Test-Time Augmentation and Variance Across Seeds}\label{sec:seed-sweep}
 
-We apply test-time augmentation by averaging softmax predictions over five views (original, horizontal flip, $\pm 5^\circ$ rotation, $+10^\circ$ rotation). TTA improves every method by 0.4--0.9 points at no extra training cost (Table~\ref{tab:tta}); VPT-Deep + TTA reaches 93.27\% MPC, our highest test number. To address the single-seed limitation we re-train the three best methods with seeds 7 and 42 in addition to seed 69 (Table~\ref{tab:seeds}). The relative ranking VPT-Deep $>$ Frozen $>$ Baseline holds at every seed, and standard deviations stay below one point.
+For test-time augmentation we average the softmax predictions over five views (original, horizontal flip, $\pm 5^\circ$ rotation, $+10^\circ$ rotation). TTA improves every method by 0.4 to 0.9 points at no extra training cost (Table~\ref{tab:tta}). VPT-Deep with TTA reaches 93.27\% MPC, our highest test number. To address the single-seed limitation we re-train the three best methods with seeds 7 and 42 alongside seed 69 (Table~\ref{tab:seeds}). The relative ranking VPT-Deep $>$ Frozen $>$ Baseline holds at every seed, and standard deviations stay below one point.
 
 \begin{figure}[H]
 \centering
