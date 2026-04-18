@@ -1,0 +1,39 @@
+\subsection{Transfer Learning with Deep CNNs}
+
+Transfer learning has reduced the data and compute requirements for training deep networks. When working with a target dataset that is small relative to large-scale benchmarks like ImageNet, pre-trained models serve as a starting point and are adapted to the downstream task through fine-tuning.
+
+Residual Networks (ResNets) \citep{he2016resnet} address the vanishing gradient problem with skip connections, enabling much deeper architectures. Standard practice initialises the network with ImageNet-pretrained weights and fine-tunes on the target dataset. The extent of adaptation introduces a trade-off: full fine-tuning risks overfitting in few-shot settings due to limited training samples, while freezing the backbone restricts task-specific representation learning. This trade-off motivates the architectural and regularization variants we examine.
+
+\subsection{Advanced Convolution Modifications}
+
+\textbf{Dilated convolution} \citep{yu2016dilated} expands the receptive field without losing spatial resolution by introducing spaces between kernel elements. A $3 \times 3$ kernel with dilation rate $d=2$ has effective receptive field
+\[
+  RF = k + (k-1)(d-1) = 5,
+\]
+so it covers a $5 \times 5$ area while keeping the same number of weights. This lets the model capture wider context such as the overall arrangement of petals.
+
+\textbf{Deformable convolution} \citep{dai2017deformable} handles geometric variation by adding a learnable offset to each sampling location. Instead of sampling on a rigid $3 \times 3$ grid, the kernel adapts to object shape, which can help with flowers that have irregular geometry or pose.
+
+\textbf{Depthwise-separable convolution} \citep{howard2017mobilenets} factors a standard convolution into a depthwise spatial filter (one kernel per channel) followed by a pointwise $1 \times 1$ mixing. For a $3 \times 3$ kernel this cuts compute and parameter count by roughly $8\times$. The smaller parameter count can reduce overfitting in few-shot settings, but it may also limit the model's capacity to learn fine-grained discriminative features.
+
+\subsection{Visual Prompt Tuning}
+
+Visual Prompt Tuning (VPT) \citep{jia2022vpt} adapts large pre-trained vision models without updating the entire network. Instead of fine-tuning the Transformer backbone, VPT inserts learnable \emph{prompt tokens} into the input sequence and trains only those prompts plus the classification head, while the backbone stays frozen. This makes VPT a parameter-efficient alternative that is well suited to few-shot scenarios.
+
+There are two main variants:
+\begin{itemize}
+  \item \textbf{VPT-Shallow}: prompts are inserted at the input of the first Transformer layer only.
+  \item \textbf{VPT-Deep}: fresh prompts are inserted at the input of every Transformer layer.
+\end{itemize}
+
+\subsection{Few-Shot Learning}
+
+Few-shot learning evaluates a model's ability to generalise from extremely limited labelled data ($k$ examples per class). The challenge is to avoid overfitting to the small training set while still learning discriminative features. Common approaches include metric learning (Siamese networks, prototypical networks), meta-learning (MAML), and aggressive data augmentation. In this project we focus on a different lever: how the choice of adaptation strategy (full fine-tuning vs.\ regularization vs.\ parameter-efficient tuning) affects generalisation as $k$ shrinks.
+
+\subsection{Regularization for Small Datasets}
+
+Two common regularizers are relevant to our experiments. \textbf{Label smoothing} \citep{szegedy2016rethinking} replaces one-hot targets with a softened distribution and reduces overconfidence:
+\[
+  \tilde{y}_i = (1 - \alpha) \cdot y_i + \alpha / K,
+\]
+where $K$ is the number of classes. \textbf{MixUp} \citep{zhang2018mixup} trains on convex combinations of two images and labels, $\tilde{x} = \lambda x_i + (1-\lambda) x_j$ with $\lambda \sim \text{Beta}(\alpha, \alpha)$, enforcing linear behaviour between examples and acting as a regularizer.

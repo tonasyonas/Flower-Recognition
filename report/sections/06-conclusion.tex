@@ -1,0 +1,15 @@
+This project presented a comprehensive evaluation of advanced CNN architectures, regularization techniques, and Visual Prompt Tuning for few-shot flower classification on Oxford Flowers 102. Across thirteen training runs and a few-shot sweep at $k \in \{1, 2, 5, 10\}$, our key findings are:
+
+\begin{itemize}
+  \item \textbf{VPT-Deep is the overall winner}, reaching 92.83\% mean per-class accuracy on the test set while updating only 0.2\% of the backbone parameters. It outperforms every CNN configuration we tried, and the margin grows as the training budget shrinks.
+  \item \textbf{Standard ResNet18 with full fine-tuning beats every architectural modification.} Dilated, deformable, depthwise-separable, and our novel hybrid all underperform the unmodified baseline, contrary to expectations.
+  \item \textbf{Freezing early layers is the most useful CNN intervention,} reaching 90.82\% MPC and outperforming both label smoothing and a 2$\times$ larger ResNet50. The same logic that makes freezing helpful drives VPT to its extreme.
+  \item \textbf{Deformable convolution is the best of the architectural variants} but optimisation challenges in the few-shot regime limit its effectiveness, particularly at $k = 1$.
+  \item \textbf{Combining techniques is non-trivial.} Our hybrid model and the label-smoothing-plus-strong-aug combination both underperform their best single ingredient.
+  \item \textbf{Parameter efficiency has costs only when the wrong axis is reduced.} Depthwise-separable convolutions cut parameters by 7$\times$ but lose 26 MPC points, while VPT cuts trainable parameters by 66$\times$ and \emph{gains} 6.7 MPC points. The difference is whether pre-trained features are preserved.
+  \item \textbf{MixUp hurts at ten shots per class.} A near-default regularizer in modern image classification dropped accuracy by 2.6 points because mixed pairs rarely preserve class-discriminative information at this data scale.
+\end{itemize}
+
+In low-data fine-grained classification, optimisation stability and pre-trained representations matter more than architectural innovation. Simplicity, with careful preservation of pre-training, outperforms complexity.
+
+\textbf{Future work.} Three directions stand out: (i) integrate triplet loss into the VPT recipe to test whether metric learning composes with prompt tuning, (ii) measure variance across seeds and across larger ViT backbones, and (iii) extend the prompt length ablation past $p = 50$, since accuracy is still increasing at our largest tested value.

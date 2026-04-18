@@ -1,0 +1,92 @@
+\subsection{Dataset}
+
+We use the Oxford Flowers 102 dataset \citep{nilsback2008}.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Split & Images & Per class \\
+\midrule
+Training   & 1,020 & 10 \\
+Validation & 1,020 & 10 \\
+Test       & 6,149 & 20--258 \\
+\bottomrule
+\end{tabular}
+\caption{Dataset split (canonical \texttt{torchvision} split).}
+\label{tab:dataset}
+\end{table}
+
+All images are resized to $224 \times 224$ and normalised with ImageNet statistics (mean $[0.485, 0.456, 0.406]$, std $[0.229, 0.224, 0.225]$).
+
+\subsection{CNN Architectures}
+
+All CNN models use ResNet18 pre-trained on ImageNet-1k as the backbone with a 102-class linear head replacing the original classifier.
+
+\textbf{ResNet18 Baseline.} Standard ResNet18 with full fine-tuning of all $\sim$11.2M parameters. Reference for comparing every other CNN configuration.
+
+\textbf{ResNet18 Dilated.} Replaces the $3 \times 3$ convolutions in \texttt{layer3} and \texttt{layer4} with dilation-2 versions, doubling the receptive field with no extra parameters. Pre-trained weights are copied into the new layer (the weight tensor shape is unchanged), so only the dilation parameter differs from the baseline at initialisation.
+
+\textbf{ResNet18 Deformable.} Replaces the first $3 \times 3$ convolution in each BasicBlock of \texttt{layer3} and \texttt{layer4} with a custom \texttt{DeformableConv2d} wrapper around \texttt{torchvision.ops.deform\_conv2d}. A small offset prediction branch produces $2 \cdot k \cdot k$ offsets per spatial location, initialised to zero so the module starts as a standard convolution. The main convolution weights are copied from the pre-trained network; only the offset branch is new.
+
+\textbf{ResNet18 Depthwise.} Replaces all $3 \times 3$ convolutions in \texttt{layer2}, \texttt{layer3}, and \texttt{layer4} with depthwise-separable convolutions. Trainable parameter count drops from 11.2M to 1.6M. The kernel shape changes, so pre-trained weights cannot be copied and the affected layers are initialised from scratch.
+
+\textbf{ResNet18 Hybrid.} Our novel combination: dilated convolutions in \texttt{layer3} and deformable convolutions in \texttt{layer4}. The intuition is that intermediate layers benefit from a wider receptive field (capturing global flower structure), while the final convolutional stage benefits from input-adaptive sampling on high-level features.
+
+\textbf{ResNet18 Frozen.} The pre-trained weights in \texttt{layer1} and \texttt{layer2} are frozen. Only \texttt{layer3}, \texttt{layer4}, and the classifier head receive gradient updates, reducing trainable parameters from 11.2M to 10.5M and preserving the low-level features learned on ImageNet.
+
+\textbf{ResNet50 Baseline.} A larger backbone (\texttt{torchvision.models.resnet50}, 23.7M parameters) trained under the same recipe as the ResNet18 baseline, to test whether scaling capacity helps under data scarcity.
+
+\subsection{Visual Prompt Tuning}
+
+We implement VPT on ViT-B/16 (86M frozen backbone parameters) using \texttt{torchvision}'s pre-trained weights.
+
+\textbf{VPT-Shallow.} 10 learnable prompt tokens are inserted at the first Transformer layer only. Given patch tokens $E_0$ and a classification token $x_0$, the input to the first layer becomes $[x_0, P, E_0]$ where $P \in \mathbb{R}^{10 \times 768}$. Subsequent layers see $[x_i, Z_i, E_i]$ unchanged. The backbone is frozen; only $P$ and the 102-way head are trained, totalling 86,118 parameters.
+
+\textbf{VPT-Deep.} A fresh set of 10 prompts is inserted at the input of every Transformer layer (12 layers, so 120 prompt tokens total). Prompts from the previous layer are discarded at each step. Trainable parameter count is 170,598, which is 0.2\% of the ViT-B/16 backbone.
+
+Both variants use truncated normal initialisation (std $= 0.02$) for the prompts.
+
+\subsection{Training Configuration}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+Hyperparameter & Value \\
+\midrule
+Optimiser & AdamW \\
+Learning rate & $1 \times 10^{-3}$ \\
+Scheduler & CosineAnnealingLR ($T_{\max} = 50$) \\
+Epochs & 50 (full training) / 30 (few-shot) \\
+Batch size & 32 \\
+Loss & Cross-Entropy \\
+Mixed precision & Yes (\texttt{torch.amp}) \\
+Seed & 69 \\
+\bottomrule
+\end{tabular}
+\caption{Default training hyperparameters.}
+\label{tab:training-config}
+\end{table}
+
+\subsection{Data Augmentation}
+
+\textbf{Standard (default):} resize to $224 \times 224$, random horizontal flip, random rotation up to $\pm 15^\circ$, normalisation.
+
+\textbf{Strong (optional):} \texttt{RandomResizedCrop(scale=(0.6, 1.0))} and \texttt{ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)}.
+
+\textbf{MixUp:} $\alpha = 0.2$, applied via the official \texttt{torchvision.transforms.v2.MixUp} integrated into a custom collate function so it works with multi-worker data loading.
+
+\subsection{Few-Shot Evaluation Protocol}
+
+For $k \in \{1, 2, 5\}$:
+\begin{enumerate}
+  \item Subsample the training set to the first $k$ images per class (deterministic with seed 69).
+  \item Validation and test sets remain unchanged.
+  \item Train for 30 epochs with the same optimiser and schedule as full-data experiments.
+  \item Report best validation accuracy during training.
+\end{enumerate}
+
+The full $k = 10$ setting uses the canonical training split and 50 epochs.

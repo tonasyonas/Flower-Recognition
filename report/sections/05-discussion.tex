@@ -1,0 +1,43 @@
+\subsection{Why Architectural Modifications Hurt}
+
+The consistent ranking of the unmodified ResNet18 baseline above every dilated, deformable, depthwise, and hybrid variant is a counter-intuitive finding. Three factors explain it.
+
+\textbf{Pre-trained feature compatibility.} ImageNet-pre-trained ResNet18 weights encode hierarchical features, low-level edges and textures in early layers and complex object parts in later layers, that transfer well to flower classification. Modifying the convolutional operator changes the computation that those weights were calibrated for. Dilation spreads the kernel sampling across a wider area than the original training expected. Deformable convolution adds an offset predictor that starts at zero and would need substantial data to learn useful displacements.
+
+\textbf{Optimisation landscape.} Advanced convolution variants introduce additional learnable parameters (offset prediction in deformable) or modified gradient flow (dilation), which complicate the loss landscape. With only 1020 training images the model cannot explore the landscape sufficiently to find a solution as good as the baseline's.
+
+\textbf{Inductive bias mismatch.} Dilated convolution was designed for dense prediction tasks like semantic segmentation, where wide context matters. Deformable convolution targets articulated objects with significant geometric variation. Neither bias matches what flower classification needs at this scale, which is to preserve and lightly adapt strong pre-trained features.
+
+\subsection{Deformable Convolutions: Promise and Challenges}
+
+Despite ranking below the baseline, deformable convolution is the strongest of the four advanced operators (83.46\% MPC, 2.7 below baseline). This is consistent with the design intent: an offset-based sampler can in principle handle the irregular geometry of flower petals. The few-shot table makes the optimisation problem more visible: at $k = 1$ the deformable variant trails the baseline by 8 points (26.96\% vs.\ 35.20\%), because the offset predictor cannot learn good offsets from a single example per class. Plausible improvements include lower learning rates for the offset branch, a warm-up phase before joint optimisation, and larger batches to stabilise gradients.
+
+\subsection{Hybrid Model: Non-Trivial Combination}
+
+Our novel hybrid (dilated in \texttt{layer3}, deformable in \texttt{layer4}) reaches 81.34\% MPC, between dilated alone (78.53\%) and deformable alone (83.46\%). The intuition was that intermediate features benefit from a wider receptive field and high-level features benefit from adaptive sampling, but the combination does not produce a synergistic gain. We see two failure modes: feature scale mismatch between the dilated mid-level features and the deformable late-level sampling, and a compounding of the optimisation difficulties present in each component.
+
+\subsection{Depthwise-Separable: When Efficiency Hurts}
+
+The depthwise variant's 60\% MPC is the largest accuracy drop in our table. The kernel shape change prevents copying pre-trained weights, so \texttt{layer2}, \texttt{layer3}, and \texttt{layer4} learn from scratch, and 50 epochs over 1020 images are not enough to recover. The 7$\times$ parameter reduction is real but does not justify a 26-point accuracy loss. For applications where storage is the only concern, depthwise can be considered, but on Flowers 102 it is the wrong choice.
+
+\subsection{Regularization: Freezing Wins, MixUp Hurts}
+
+Among the four regularizers, freezing the first two ResNet18 layers gave the largest gain (90.82\% MPC, $+4.71$ over baseline). The mechanism is the same one that drives VPT to its extreme: do not touch the pre-trained weights. Label smoothing added another $+3.29$ over baseline by softening targets and reducing overconfidence. Combining label smoothing with strong augmentation gave less than label smoothing alone, suggesting the two compete for the same regularization slack.
+
+MixUp's $-2.61$ result is the surprise. In most image classification settings MixUp improves generalisation, but at 10 images per class and 102 classes, mixed pairs span unrelated species more often than not. The resulting soft labels carry little class-discriminative information, and the model wastes capacity memorising blends instead of learning clean class boundaries. Strong augmentation alone produced no change relative to the baseline, indicating that Flowers 102 is already tolerant to mild geometric variation and that the bottleneck is class identity, not pose.
+
+\subsection{Why VPT-Deep Wins}
+
+Two effects compound. First, VPT-Deep trains 0.2\% of the backbone parameters, which limits overfitting in the way that freezing layers does for the ResNet, only more aggressively. Second, the prompts act as task-specific queries inserted into the input space at every Transformer layer, reshaping what the frozen backbone attends to without altering what it computes. The backbone's pre-trained representations stay intact.
+
+The few-shot curves confirm both effects. At $k = 1$ the VPT-Deep margin over the best CNN is 11 points; at $k = 10$ it shrinks to 1 point. Less data favours fewer parameters and more reliance on pre-training, which is exactly what VPT provides.
+
+The prompt length ablation (Figure~\ref{fig:prompt-length}) shows that longer prompts continue to help up to $p = 50$ (94.51\% val), so the 92.83\% MPC test result for our default $p = 10$ is not the ceiling for this method.
+
+\subsection{Comparison with Prior Work}
+
+\citet{nilsback2008} reported 72.8\% accuracy on Flowers 102 with hand-engineered SIFT, HOG, and HSV features combined in a multiple-kernel SVM. Our VPT-Deep result (91.64\% test accuracy, 92.83\% MPC) is in the range reported by recent Transformer-based methods, though direct comparison is hard because many papers use larger backbones (ViT-L/14), additional tricks, or different splits. \citet{jia2022vpt} reported 89.11\% average accuracy across five FGVC datasets for VPT-Deep on a ViT-B/16 pre-trained on ImageNet-21k; our 92.83\% MPC on ImageNet-1k pre-trained weights sits above that average.
+
+\subsection{Limitations}
+
+Every result reflects a single seed and a single backbone scale. Variance across seeds is the most obvious gap. We did not implement triplet loss (suggested in the project handout) or test-time augmentation, both of which could push the numbers higher. The prompt length ablation indicates $p = 50$ outperforms our $p = 10$ default, so the VPT-Deep numbers in Table~\ref{tab:main-results} are not the best the method can produce.

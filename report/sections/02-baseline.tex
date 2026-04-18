@@ -1,9 +1,0 @@
-We start with the simplest recipe that still leverages pre-training: take a ResNet18 pre-trained on ImageNet-1k, replace the final classification layer with a 102-way linear head, and fine-tune every parameter. This baseline tells us what standard transfer learning gets without tricks.
-
-\subsection{Architecture}
-We use \texttt{torchvision.models.resnet18} with \texttt{ResNet18\_Weights.DEFAULT}. The original 1000-way classifier is replaced with \texttt{nn.Linear(512, 102)}. All weights are trainable. The model has 11,228,838 parameters, matching the standard ResNet18.
-
-\subsection{Results and Analysis}
-The baseline reaches 86.11\% mean per-class accuracy on the test set (Table~\ref{tab:main-results}). Training accuracy reaches 100\% before epoch 20, while validation accuracy plateaus near 88\%, a gap of more than ten points that signals overfitting. With ten images per class spread over 102 classes, the model simply memorises the training set. The confusion matrix (analysed for the best model in \S\ref{sec:discussion}) shows the baseline struggles most on classes with high intra-class variability like ``bolero deep blue'' and ``common dandelion'', where different lighting or pose produces visibly different images of the same flower.
-
-This baseline sets the floor for what the rest of the report improves on (or fails to improve on).

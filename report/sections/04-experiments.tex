@@ -1,0 +1,164 @@
+\subsection{Main Results: Test-Set Comparison}
+
+Table~\ref{tab:main-results} reports test-set accuracy, mean per-class accuracy, and top-5 accuracy for every model we trained, sorted by mean per-class accuracy.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lcccr}
+\toprule
+Method & Test Acc (\%) & MPC Acc (\%) & Top-5 (\%) & Trainable params \\
+\midrule
+\textbf{VPT-Deep}              & \textbf{91.64} & \textbf{92.83} & \textbf{97.93} & \textbf{170{,}598} \\
+Frozen ResNet18                & 88.52 & 90.82 & --- & 10{,}545{,}766 \\
+Label Smoothing ($\alpha{=}0.1$) & 87.27 & 89.40 & --- & 11{,}228{,}838 \\
+Label Smoothing + Strong Aug   & 86.40 & 88.24 & --- & 11{,}228{,}838 \\
+ResNet50                       & 85.93 & 88.07 & --- & 23{,}717{,}030 \\
+VPT-Shallow                    & 84.13 & 85.70 & 95.43 & 86{,}118 \\
+Baseline                       & 84.42 & 86.11 & --- & 11{,}228{,}838 \\
+Strong Augmentation            & 84.42 & 86.11 & --- & 11{,}228{,}838 \\
+Deformable                     & 81.33 & 83.46 & --- & 11{,}415{,}534 \\
+MixUp ($\alpha{=}0.2$)         & 80.52 & 83.50 & --- & 11{,}228{,}838 \\
+Hybrid (ours)                  & 78.73 & 81.34 & --- & 11{,}353{,}290 \\
+Dilated                        & 75.95 & 78.53 & --- & 11{,}228{,}838 \\
+Depthwise                      & 57.03 & 59.71 & --- & 1{,}623{,}270 \\
+\bottomrule
+\end{tabular}
+\caption{Test-set results for every model we trained, sorted by mean per-class accuracy. VPT-Deep wins by a margin of more than two MPC points while training only $\sim$0.2\% of its backbone parameters.}
+\label{tab:main-results}
+\end{table}
+
+Figure~\ref{fig:param-efficiency} plots the same data on a log-parameter axis. The two VPT variants sit in the top-left corner: highest accuracy at the smallest trainable parameter count.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/parameter-efficiency.pdf}
+\caption{Mean per-class accuracy versus trainable parameter count. The VPT variants (red) achieve the best accuracy at the smallest parameter counts. CNN variants (grey) cluster in the middle-right region.}
+\label{fig:param-efficiency}
+\end{figure}
+
+\textbf{Key observations.}
+\begin{itemize}
+  \item VPT-Deep beats every CNN we tried, including the strongest regularized variant (Frozen ResNet18 at 90.82\% MPC).
+  \item Among CNNs, freezing early layers is the most useful intervention. It outperforms both label smoothing and a $2\times$ larger ResNet50.
+  \item Every architectural modification to ResNet18 (dilated, deformable, hybrid, depthwise) underperforms the unmodified baseline.
+  \item MixUp, despite being a near-default regularizer in modern image pipelines, drops MPC accuracy by 2.6 points relative to the baseline.
+\end{itemize}
+
+\subsection{Few-Shot Learning Results}
+
+Table~\ref{tab:fewshot} reports the best validation accuracy for each method as the per-class training budget shrinks from 10 to 1 image. Figure~\ref{fig:fewshot} plots the same numbers.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+Method & $k=1$ & $k=2$ & $k=5$ & $k=10$ \\
+\midrule
+\textbf{VPT-Deep}        & \textbf{46.37} & \textbf{68.82} & \textbf{84.90} & \textbf{93.63} \\
+Frozen ResNet18          & 35.10 & 65.78 & 81.47 & 91.67 \\
+VPT-Shallow              & 37.84 & 57.16 & 77.45 & 86.08 \\
+Baseline (full FT)       & 35.20 & 59.31 & 79.61 & 88.33 \\
+Deformable               & 26.96 & 54.22 & 77.45 & 84.61 \\
+Hybrid                   & 24.80 & 46.37 & 68.73 & 82.45 \\
+Dilated                  & 22.94 & 47.25 & 65.59 & 79.71 \\
+Depthwise                & 6.96  & 12.75 & 39.41 & 60.78 \\
+\bottomrule
+\end{tabular}
+\caption{Best validation accuracy (\%) at different training budgets ($k$ images per class).}
+\label{tab:fewshot}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{figures/fewshot-curves.pdf}
+\caption{Few-shot learning curves. VPT-Deep dominates at every $k$, with the largest margin at $k=1$.}
+\label{fig:fewshot}
+\end{figure}
+
+\textbf{Key observations.}
+\begin{itemize}
+  \item VPT-Deep wins at every $k$. Margin over the next best method (Frozen ResNet18) is roughly 1 point at $k=10$, 3 points at $k=5$, 3 points at $k=2$, and 11 points at $k=1$.
+  \item The gap widens as data shrinks, confirming that parameter-efficient tuning matters more in low-data regimes.
+  \item The baseline (full fine-tuning of 11M parameters) is below both VPT and Frozen at small $k$, and only catches up at $k=10$.
+  \item Depthwise collapses at $k=1$ (6.96\%) because it cannot reuse pre-trained weights and has no signal to learn from scratch.
+\end{itemize}
+
+\subsection{VPT Prompt Length Ablation}
+
+Figure~\ref{fig:prompt-length} ablates the number of prompts per layer for VPT-Deep on the full training set. Accuracy increases monotonically from 91.08\% at $p = 1$ to 94.51\% at $p = 50$, with diminishing returns. Our default $p = 10$ gives 93.63\%.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.6\textwidth]{figures/prompt-length.pdf}
+\caption{VPT-Deep validation accuracy versus number of prompts per Transformer layer.}
+\label{fig:prompt-length}
+\end{figure}
+
+\subsection{Regularization Ablation on the Baseline}
+
+Table~\ref{tab:reg} isolates the effect of each regularization technique on the baseline ResNet18 (the relevant rows are taken from Table~\ref{tab:main-results}).
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Method & MPC Acc (\%) & $\Delta$ vs.\ baseline \\
+\midrule
+Frozen \texttt{layer1+2}        & \textbf{90.82} & $+4.71$ \\
+Label smoothing ($\alpha{=}0.1$)  & 89.40          & $+3.29$ \\
+Label smoothing + strong aug   & 88.24          & $+2.13$ \\
+Baseline                       & 86.11          & --- \\
+Strong augmentation only       & 86.11          & $+0.00$ \\
+MixUp ($\alpha{=}0.2$)         & 83.50          & $-2.61$ \\
+\bottomrule
+\end{tabular}
+\caption{Effect of regularization on ResNet18.}
+\label{tab:reg}
+\end{table}
+
+Three of the four regularizers help, but only modestly. MixUp actively hurts. Combining label smoothing with strong augmentation does worse than label smoothing alone, suggesting the two compete for the same regularization budget.
+
+\subsection{Training Dynamics}
+
+Figure~\ref{fig:training-curves} plots validation accuracy per epoch for the main methods. Three observations:
+\begin{itemize}
+  \item All models converge within 30--40 epochs under cosine annealing.
+  \item VPT-Deep climbs faster than the CNN variants in the first 10 epochs, reflecting the stronger ViT-B/16 prior.
+  \item The CNN variants reach 100\% training accuracy by epoch 20 (not shown), while validation plateaus around 86--91\%, signalling overfitting.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{figures/training-curves.pdf}
+\caption{Validation accuracy over training epochs for the main methods.}
+\label{fig:training-curves}
+\end{figure}
+
+\subsection{Parameter Efficiency Analysis}
+
+Table~\ref{tab:params} compares trainable parameter counts. VPT-Deep uses $66\times$ fewer trainable parameters than the baseline ResNet18 yet achieves 6.7 MPC points higher accuracy. The depthwise variant achieves a $7\times$ parameter reduction but loses 26 MPC points, an unacceptable trade for fine-grained classification.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lrr}
+\toprule
+Method & Trainable params & Relative to baseline \\
+\midrule
+VPT-Shallow & 86,118 & $0.008\times$ \\
+VPT-Deep    & 170,598 & $0.015\times$ \\
+Depthwise   & 1,623,270 & $0.14\times$ \\
+Frozen      & 10,545,766 & $0.94\times$ \\
+Baseline    & 11,228,838 & $1.00\times$ \\
+Dilated     & 11,228,838 & $1.00\times$ \\
+Hybrid      & 11,353,290 & $1.01\times$ \\
+Deformable  & 11,415,534 & $1.02\times$ \\
+ResNet50    & 23,717,030 & $2.11\times$ \\
+\bottomrule
+\end{tabular}
+\caption{Trainable parameter counts. VPT achieves 8--10$\times$ fewer parameters than even the depthwise variant.}
+\label{tab:params}
+\end{table}

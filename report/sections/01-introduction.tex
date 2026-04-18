@@ -1,35 +1,35 @@
-The Oxford Flowers 102 dataset contains 102 species of flowers common in the United Kingdom, with between 40 and 258 images per class \citep{nilsback2008}. The canonical split has ten images per class for training, ten for validation, and the remaining 6149 images for testing. This setting is fine-grained (many classes look similar at first glance) and data-scarce (ten training examples per class). A good model must learn discriminative features without overfitting, which makes Flowers 102 a useful probe for comparing adaptation strategies on top of a large pre-trained backbone.
+\subsection{Problem Motivation}
 
-Large pre-trained vision models have changed how transfer learning works. A ResNet or ViT trained on ImageNet-21k encodes features general enough to transfer to many downstream tasks, but the best way to adapt those features to a small target dataset is not obvious. Three broad families dominate in practice. The first alters the backbone architecture by swapping in dilated, deformable, or depthwise-separable convolutions. The second keeps the architecture fixed and relies on regularization, such as freezing early layers, label smoothing, MixUp, or stronger image augmentation. The third family, which includes Visual Prompt Tuning (VPT) \citep{jia2022vpt}, freezes the backbone entirely and learns a small number of additional input-space parameters.
+Fine-grained image classification involves distinguishing between visually similar categories such as bird species, dog breeds, or flower types. Unlike generic object recognition, these tasks require models to capture subtle discriminative features while remaining robust to variations in lighting, orientation, and occlusion.
 
-This report compares all three families on Flowers 102. We train eleven CNN configurations, two VPT variants, and study how each performs under progressively smaller training budgets ($k = 1, 2, 5, 10$ shots per class). Our central finding is that parameter efficiency beats architectural modification: VPT-Deep reaches 92.83\% mean per-class accuracy on the test set while training 0.2\% of the backbone parameters, and this advantage grows as training data shrinks.
+The Oxford Flowers 102 dataset \citep{nilsback2008} exemplifies this challenge: with only 10 images per class in the standard split, models have very few training samples to learn parameters that accurately classify 102 flower categories. The constraint makes Flowers 102 a natural benchmark for evaluating few-shot learning methods, where models must generalise effectively from limited data.
 
-\subsection{Literature Review}
+While modern architectures such as Convolutional Neural Networks (CNNs) and Vision Transformers (ViTs) have achieved strong performance on large-scale datasets, it is unclear whether those gains transfer to low-data conditions. Their effectiveness under data-scarce regimes, where only $k$ examples per class are available ($k \in \{1, 2, 5, 10\}$), remains less well understood.
 
-\textbf{The Flowers 102 dataset} was introduced by \citet{nilsback2008}, who reported 72.8\% accuracy using a combined kernel over SIFT, HOG, and HSV features. The primary metric was mean per-class accuracy, which we adopt here because the test set is class-imbalanced (20 to 258 images per class).
+\subsection{Approach Overview}
 
-\textbf{Transfer learning with convolutions.} \citet{he2016resnet} showed that deep residual networks pre-trained on ImageNet transfer well to smaller datasets. Subsequent work explored modifications to the convolutional operator itself. Dilated convolutions \citep{yu2016dilated} enlarge the receptive field without adding parameters by inserting zeros between kernel weights. Deformable convolutions \citep{dai2017deformable} learn input-dependent offsets for each sampling location, adapting to object shape. Depthwise-separable convolutions \citep{howard2017mobilenets} factor a standard convolution into per-channel spatial filtering followed by a pointwise mixing, cutting parameters by a factor of eight or more.
+This project investigates the role of architectural design and parameter-efficient adaptation in few-shot learning. Under controlled experimental conditions, we compare:
 
-\textbf{Regularization for small datasets.} Label smoothing \citep{szegedy2016rethinking} replaces one-hot targets with a softened distribution and reduces overconfident predictions. MixUp \citep{zhang2018mixup} trains the model on convex combinations of two images and their labels, enforcing linear behaviour between examples and acting as a regularizer.
+\begin{itemize}
+  \item \textbf{Five ResNet18-based architectures}: a baseline plus four advanced convolutional variants (dilated, deformable, depthwise-separable, and a novel hybrid combining dilated and deformable layers).
+  \item \textbf{Four regularization strategies} on the ResNet18 baseline: freezing early layers, label smoothing, MixUp, and stronger augmentation.
+  \item \textbf{A larger CNN backbone} (ResNet50) to test whether scaling parameters helps.
+  \item \textbf{Visual Prompt Tuning (VPT)} on a ViT-B/16 backbone, in both Shallow and Deep configurations \citep{jia2022vpt}.
+\end{itemize}
 
-\textbf{Parameter-efficient tuning.} \citet{jia2022vpt} proposed Visual Prompt Tuning, which keeps the Transformer backbone frozen and inserts a small set of learnable prompt tokens into the input space. The shallow variant injects prompts at only the first layer, while the deep variant inserts fresh prompts at every transformer layer. On the fine-grained datasets in the VPT paper, VPT-Deep exceeded full fine-tuning while updating less than 1\% of the parameters.
+All models share an identical training recipe (AdamW, cosine annealing, 50 epochs, batch size 32) so that differences are attributable to the method itself. Performance is measured by accuracy, mean per-class accuracy, and top-5 accuracy on the test set, with a few-shot sweep at $k = 1, 2, 5$ to study how each method degrades.
 
-\subsection{Objective}
+Through this study, we ask whether architectural complexity translates into better generalisation in the few-shot regime, or whether simpler approaches with strong pre-training are more effective. We also test whether parameter-efficient tuning can match or beat full fine-tuning on a fine-grained task.
 
-We compare architectural modifications, regularization, and Visual Prompt Tuning on Oxford Flowers 102. We report mean per-class accuracy (following \citet{nilsback2008}), standard accuracy, and top-5 accuracy. We measure how each method degrades under few-shot conditions and analyse which adaptation family is best suited to fine-grained classification with limited data.
+\subsection{Training and Evaluation Setup}
 
-\subsection{Training and Evaluation}
+We use the canonical \texttt{torchvision.datasets.Flowers102} split: 1020 training images, 1020 validation images, and 6149 test images. Images are resized to $224 \times 224$ and normalised with ImageNet statistics. The training transform applies a random horizontal flip and rotation up to 15 degrees.
 
-\subsubsection{Dataset}
-We use the canonical split from \texttt{torchvision.datasets.Flowers102}: 1020 training images, 1020 validation images, and 6149 test images. Images are resized to $224 \times 224$ and normalised with ImageNet statistics. The training transform applies random horizontal flip and random rotation up to 15 degrees.
-
-\subsubsection{Metrics}
 We report three test-set metrics:
 \begin{itemize}
-  \item \textbf{Accuracy} (overall correct predictions over all samples).
-  \item \textbf{Mean per-class accuracy (MPC)}: the average of per-class recall, which is our primary metric following \citet{nilsback2008}. This corrects for the class imbalance in the test set.
+  \item \textbf{Accuracy}: overall correct predictions over all samples.
+  \item \textbf{Mean per-class accuracy (MPC)}: average per-class recall, our primary metric following \citet{nilsback2008}. The test set is class-imbalanced (20 to 258 images per class), so this corrects for class frequency.
   \item \textbf{Top-5 accuracy}: fraction of samples where the true class appears in the top-5 predictions.
 \end{itemize}
 
-\subsubsection{Experimental Setup}
-Unless stated otherwise, every model is trained for 50 epochs with AdamW ($\text{lr} = 10^{-3}$), cosine annealing, batch size 32, and automatic mixed precision. We set the seed to 69 for every run. All experiments run on a single NVIDIA RTX 3070 Ti.
+Unless stated otherwise, every model trains for 50 epochs with AdamW ($\text{lr} = 10^{-3}$), cosine annealing, batch size 32, automatic mixed precision, and seed 69. Experiments run on a single NVIDIA RTX 3070 Ti.
