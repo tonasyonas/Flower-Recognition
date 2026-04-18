@@ -4,7 +4,7 @@ We use the canonical Oxford Flowers 102 split \citep{nilsback2008}: 1020 trainin
 
 \subsection{CNN Architectures}
 
-All seven CNN configurations build on a ResNet pre-trained on ImageNet-1k with a 102-class linear head replacing the original classifier. Wherever we modify a layer, pre-trained weights are copied into the new layer if the kernel shape matches. The configurations are:
+All seven CNN configurations start from a ResNet pre-trained on ImageNet-1k. We replace the original classifier with a 102-class linear head. Wherever we modify a layer, we copy the pre-trained weights into the new layer when the kernel shape allows.
 
 \begin{itemize}
   \item \textbf{Baseline (ResNet18).} Full fine-tuning of all 11.2M parameters, the reference for every other configuration.
@@ -22,7 +22,7 @@ We implement VPT on a frozen ViT-B/16 (86M backbone parameters) using \texttt{to
 
 \subsection{Training and Augmentation}
 
-Unless stated otherwise, every model trains for 50 epochs (30 for few-shot) with AdamW ($\text{lr} = 10^{-3}$), CosineAnnealingLR ($T_{\max}$ = epochs), batch size 32, mixed precision (\texttt{torch.amp}), Cross-Entropy loss, and seed 69. Standard augmentation is the resize/flip/rotation pipeline above. The optional \emph{strong} pipeline replaces it with \texttt{RandomResizedCrop(scale=(0.6, 1.0))} and \texttt{ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)}. \emph{MixUp} ($\alpha = 0.2$) is applied via the official \texttt{torchvision.transforms.v2.MixUp} integrated into a multi-worker-safe collate function.
+Unless stated otherwise, every model trains for 50 epochs (30 for few-shot) with AdamW ($\text{lr} = 10^{-3}$), CosineAnnealingLR ($T_{\max}$ = epochs), batch size 32, mixed precision (\texttt{torch.amp}), Cross-Entropy loss, and seed 69. Standard augmentation is the resize/flip/rotation pipeline described above. The optional \emph{strong} pipeline replaces it with \texttt{RandomResizedCrop(scale=(0.6, 1.0))} and \texttt{ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)}. \emph{MixUp} ($\alpha = 0.2$) is applied through the official \texttt{torchvision.transforms.v2.MixUp} integrated into a multi-worker-safe collate function.
 
 \subsection{Few-Shot Protocol}
 

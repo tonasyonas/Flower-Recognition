@@ -1,25 +1,23 @@
 \subsection{Problem Motivation}
 
-Fine-grained image classification involves distinguishing between visually similar categories such as bird species, dog breeds, or flower types. Unlike generic object recognition, these tasks require models to capture subtle discriminative features while remaining robust to variations in lighting, orientation, and occlusion.
+Fine-grained classification means telling apart visually similar categories: bird species, dog breeds, flower types. The model has to pick up on subtle differences in shape and colour while shrugging off variations in lighting and pose.
 
-The Oxford Flowers 102 dataset \citep{nilsback2008} exemplifies this challenge: with only 10 images per class in the standard split, models have very few training samples to learn parameters that accurately classify 102 flower categories. The constraint makes Flowers 102 a natural benchmark for evaluating few-shot learning methods, where models must generalise effectively from limited data.
+Oxford Flowers 102 \citep{nilsback2008} makes this harder by giving us very little to work with. The standard split has only 10 training images per class across 102 classes, which is barely enough to fit a softmax head, let alone an 11M-parameter network. That makes it a useful benchmark for few-shot methods.
 
-While modern architectures such as Convolutional Neural Networks (CNNs) and Vision Transformers (ViTs) have achieved strong performance on large-scale datasets, it is unclear whether those gains transfer to low-data conditions. Their effectiveness under data-scarce regimes, where only $k$ examples per class are available ($k \in \{1, 2, 5, 10\}$), remains less well understood.
+CNNs and Vision Transformers (ViTs) do well on large datasets, but it is less obvious how they behave when training data is scarce. We wanted to find out which adaptation strategy holds up best at $k \in \{1, 2, 5, 10\}$ examples per class.
 
 \subsection{Approach Overview}
 
-This project investigates the role of architectural design and parameter-efficient adaptation in few-shot learning. Under controlled experimental conditions, we compare:
+We compare three families of adaptation under a single shared training recipe (AdamW, cosine annealing, 50 epochs, batch size 32) so that any difference in performance is attributable to the method itself:
 
 \begin{itemize}
-  \item \textbf{Five ResNet18-based architectures}: a baseline plus four advanced convolutional variants (dilated, deformable, depthwise-separable, and a novel hybrid combining dilated and deformable layers).
-  \item \textbf{Four regularization strategies} on the ResNet18 baseline: freezing early layers, label smoothing, MixUp, and stronger augmentation.
-  \item \textbf{A larger CNN backbone} (ResNet50) to test whether scaling parameters helps.
+  \item \textbf{Five ResNet18 variants}: a baseline plus four advanced convolutional modifications (dilated, deformable, depthwise-separable, and our novel hybrid combining dilated and deformable layers).
+  \item \textbf{Four regularization strategies} on top of the ResNet18 baseline: freezing early layers, label smoothing, MixUp, and stronger image augmentation.
+  \item \textbf{A larger CNN backbone} (ResNet50) to test whether more capacity helps.
   \item \textbf{Visual Prompt Tuning (VPT)} on a ViT-B/16 backbone, in both Shallow and Deep configurations \citep{jia2022vpt}.
 \end{itemize}
 
-All models share an identical training recipe (AdamW, cosine annealing, 50 epochs, batch size 32) so that differences are attributable to the method itself. Performance is measured by accuracy, mean per-class accuracy, and top-5 accuracy on the test set, with a few-shot sweep at $k = 1, 2, 5$ to study how each method degrades.
-
-Through this study, we ask whether architectural complexity translates into better generalisation in the few-shot regime, or whether simpler approaches with strong pre-training are more effective. We also test whether parameter-efficient tuning can match or beat full fine-tuning on a fine-grained task.
+We measure accuracy, mean per-class accuracy, and top-5 accuracy on the test set. We also rerun every method at $k = 1, 2, 5$ images per class to see how it degrades. Two questions drive the work: does architectural complexity actually help in the few-shot regime, and can parameter-efficient tuning match or beat full fine-tuning on a fine-grained task?
 
 \subsection{Training and Evaluation Setup}
 
