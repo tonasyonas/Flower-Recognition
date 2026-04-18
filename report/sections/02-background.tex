@@ -1,39 +1,45 @@
-\subsection{Transfer Learning with Deep CNNs}
+This section reviews the four research strands our work draws on: transfer learning for fine-grained classification, advanced convolution operators, parameter-efficient adaptation of Vision Transformers, and few-shot learning. We focus on the lineage of ideas that motivated each of our experiments rather than attempting an exhaustive survey.
 
-Transfer learning has reduced the data and compute requirements for training deep networks. When working with a target dataset that is small relative to large-scale benchmarks like ImageNet, pre-trained models serve as a starting point and are adapted to the downstream task through fine-tuning.
+\subsection{Transfer Learning and Fine-Grained Classification}
 
-Residual Networks (ResNets) \citep{he2016resnet} address the vanishing gradient problem with skip connections, enabling much deeper architectures. Standard practice initialises the network with ImageNet-pretrained weights and fine-tunes on the target dataset. The extent of adaptation introduces a trade-off: full fine-tuning risks overfitting in few-shot settings due to limited training samples, while freezing the backbone restricts task-specific representation learning. This trade-off motivates the architectural and regularization variants we examine.
+The standard recipe for adapting a large pre-trained backbone to a small target dataset is full fine-tuning, in which all weights are updated end-to-end on the new task. \citet{yosinski2014transferable} showed that the lower layers of a deep network learn general-purpose features that transfer across datasets, while higher layers become progressively more task-specific. This observation underlies common practice in transfer learning: initialise from ImageNet-pre-trained weights, optionally freeze early layers, and fine-tune the rest.
 
-\subsection{Advanced Convolution Modifications}
+Residual networks \citep{he2016resnet} replaced plain stacked convolutions with skip connections that allow gradients to bypass blocks during back-propagation, enabling much deeper architectures and producing the ResNet family of backbones we use as a CNN reference. Vision Transformers \citep{dosovitskiy2021vit} demonstrated that pure attention-based architectures, when pre-trained on large enough corpora, match or exceed convolutional networks on image classification, motivating the ViT-B/16 backbone we use for VPT.
 
-\textbf{Dilated convolution} \citep{yu2016dilated} expands the receptive field without losing spatial resolution by introducing spaces between kernel elements. A $3 \times 3$ kernel with dilation rate $d=2$ has effective receptive field
-\[
-  RF = k + (k-1)(d-1) = 5,
-\]
-so it covers a $5 \times 5$ area while keeping the same number of weights. This lets the model capture wider context such as the overall arrangement of petals.
+Fine-grained recognition is harder than generic object recognition because inter-class differences are subtle and intra-class variation is large. Bilinear CNNs \citep{lin2015bilinear} capture pairwise feature interactions and improved fine-grained accuracy by computing the outer product of two streams of CNN features. The Oxford Flowers 102 dataset itself was introduced by \citet{nilsback2008}, who reported 72.8\% accuracy with a multiple-kernel SVM combining SIFT, HOG, and HSV descriptors. The paper established mean per-class accuracy as the primary evaluation metric, which we adopt to handle the class-imbalanced test split.
 
-\textbf{Deformable convolution} \citep{dai2017deformable} handles geometric variation by adding a learnable offset to each sampling location. Instead of sampling on a rigid $3 \times 3$ grid, the kernel adapts to object shape, which can help with flowers that have irregular geometry or pose.
+\subsection{Advanced Convolution Operators}
 
-\textbf{Depthwise-separable convolution} \citep{howard2017mobilenets} factors a standard convolution into a depthwise spatial filter (one kernel per channel) followed by a pointwise $1 \times 1$ mixing. For a $3 \times 3$ kernel this cuts compute and parameter count by roughly $8\times$. The smaller parameter count can reduce overfitting in few-shot settings, but it may also limit the model's capacity to learn fine-grained discriminative features.
+The standard $3 \times 3$ convolution has been generalised in three influential directions, each motivated by a specific limitation.
 
-\subsection{Visual Prompt Tuning}
+\textbf{Dilated convolutions} were introduced by \citet{yu2016dilated} for dense prediction. By inserting zeros between kernel weights, dilation enlarges the receptive field with no extra parameters. \citet{chen2017deeplab} adopted dilated convolutions in DeepLab to produce dense semantic segmentation maps without losing spatial resolution. The technique is most useful when wider context matters, which is why we test it in the deeper layers of ResNet18.
 
-Visual Prompt Tuning (VPT) \citep{jia2022vpt} adapts large pre-trained vision models without updating the entire network. Instead of fine-tuning the Transformer backbone, VPT inserts learnable \emph{prompt tokens} into the input sequence and trains only those prompts plus the classification head, while the backbone stays frozen. This makes VPT a parameter-efficient alternative that is well suited to few-shot scenarios.
+\textbf{Deformable convolutions} \citep{dai2017deformable} replace the rigid sampling grid of a convolution with one that adapts per pixel. A small auxiliary branch predicts $2 \cdot k^2$ offsets per spatial location, and the main convolution then samples at the displaced positions. The original paper reported gains on object detection and semantic segmentation, where target objects undergo significant geometric variation. Flowers exhibit similar variation in petal arrangement and orientation, motivating us to test deformable convolution on the same dataset.
 
-There are two main variants:
-\begin{itemize}
-  \item \textbf{VPT-Shallow}: prompts are inserted at the input of the first Transformer layer only.
-  \item \textbf{VPT-Deep}: fresh prompts are inserted at the input of every Transformer layer.
-\end{itemize}
+\textbf{Depthwise-separable convolutions} factor a standard $3 \times 3$ convolution into a depthwise stage (one $3 \times 3$ filter per input channel) followed by a pointwise $1 \times 1$ mixing. \citet{howard2017mobilenets} applied the factorisation throughout MobileNet to cut compute by roughly $8\times$ for mobile deployment, while \citet{chollet2017xception} used the same operator in Xception and showed it can match or outperform standard convolution on ImageNet given enough capacity. The promise for our setting is that the smaller parameter count might reduce overfitting at 10 examples per class.
+
+\subsection{Parameter-Efficient Tuning}
+
+Full fine-tuning updates every backbone parameter and stores a separate copy of the model for each downstream task. Several lighter alternatives have emerged. \emph{Linear probing} freezes the backbone and trains only a linear classifier on top of its features. \emph{BitFit} updates only the bias terms. \emph{Adapter} layers \citep{jia2022vpt} insert small bottleneck modules between Transformer layers and train only those modules. Each method trades plasticity for parameter efficiency.
+
+\textbf{Visual Prompt Tuning (VPT)} \citep{jia2022vpt} extends the prompt tuning idea from language modelling to vision. Instead of modifying the network, VPT inserts a small set of learnable prompt vectors into the Transformer's input space. The backbone stays frozen and only the prompts plus the classifier head are trained. The paper distinguishes a shallow variant, where prompts are inserted at the first Transformer layer only, from a deep variant, where fresh prompts are inserted at every layer. On 24 downstream recognition tasks, VPT-Deep beat full fine-tuning on 20 while training less than 1\% of the backbone parameters. The deep variant proved especially strong in low-data regimes, which is why we use it as our main experimental method on Flowers 102.
+
+The 2025 follow-up \emph{Prompt-CAM} \citep{chowdhury2025promptcam} showed that the same VPT prompts can be repurposed for interpretability: the multi-head attention from each class-specific prompt highlights the discriminative regions of the input. We do not implement Prompt-CAM here but note it as a natural next step given that we already train VPT.
 
 \subsection{Few-Shot Learning}
 
-Few-shot learning evaluates a model's ability to generalise from extremely limited labelled data ($k$ examples per class). The challenge is to avoid overfitting to the small training set while still learning discriminative features. Common approaches include metric learning (Siamese networks, prototypical networks), meta-learning (MAML), and aggressive data augmentation. In this project we focus on a different lever: how the choice of adaptation strategy (full fine-tuning vs.\ regularization vs.\ parameter-efficient tuning) affects generalisation as $k$ shrinks.
+Few-shot learning aims to train a model that generalises from very few labelled examples per class. Three families of methods dominate.
+
+\emph{Metric learning} embeds inputs into a feature space where same-class examples are close and different-class examples are far apart, then classifies new examples by nearest neighbour. \citet{vinyals2016matching} introduced Matching Networks, which compute attention-weighted nearest-neighbour predictions over a small support set. \citet{snell2017prototypical} simplified the idea with Prototypical Networks, which represent each class by the centroid of its support embeddings and classify queries by Euclidean distance to those centroids. The triplet loss we use to fine-tune VPT-Deep belongs to the same family: it pulls same-class embeddings together and pushes different-class embeddings apart.
+
+\emph{Meta-learning} treats each few-shot task as a training instance and optimises for fast adaptation. MAML \citep{finn2017maml} learns an initialisation from which a few gradient steps on a new task produce a good model. These methods require episodic training across many tasks, which is not directly applicable to a single dataset like Flowers 102, so we do not implement them.
+
+\emph{Transfer learning baselines} simply fine-tune a pre-trained backbone on the few-shot training set. Recent work has shown that strong pre-training plus standard fine-tuning often matches or beats more elaborate few-shot methods, and our results corroborate that view: VPT-Deep with no episodic training already wins at every shot count we tested.
 
 \subsection{Regularization for Small Datasets}
 
-Two common regularizers are relevant to our experiments. \textbf{Label smoothing} \citep{szegedy2016rethinking} replaces one-hot targets with a softened distribution and reduces overconfidence:
-\[
-  \tilde{y}_i = (1 - \alpha) \cdot y_i + \alpha / K,
-\]
-where $K$ is the number of classes. \textbf{MixUp} \citep{zhang2018mixup} trains on convex combinations of two images and labels, $\tilde{x} = \lambda x_i + (1-\lambda) x_j$ with $\lambda \sim \text{Beta}(\alpha, \alpha)$, enforcing linear behaviour between examples and acting as a regularizer.
+Standard cross-entropy training with one-hot targets encourages overconfident predictions and tends to overfit when data is scarce. \textbf{Label smoothing} \citep{szegedy2016rethinking} replaces the one-hot target $y$ with $\tilde{y}_i = (1 - \alpha) y_i + \alpha / K$, where $K$ is the number of classes. This bounds the maximum softmax probability the model can predict and slightly improves calibration in addition to acting as a regularizer.
+
+\textbf{MixUp} \citep{zhang2018mixup} trains on convex combinations of pairs of inputs and labels: $\tilde{x} = \lambda x_i + (1-\lambda) x_j$, $\tilde{y} = \lambda y_i + (1-\lambda) y_j$, with $\lambda \sim \text{Beta}(\alpha, \alpha)$. Training on these mixed examples enforces locally linear behaviour between training points and reduces memorisation. Several follow-ups proposed alternatives that mix images differently: \textbf{CutMix} \citep{yun2019cutmix} cuts a rectangular patch from one image and pastes it onto another, with the label mixed proportionally to the patch area. We use the official \texttt{torchvision} v2 implementation of MixUp.
+
+\textbf{Triplet loss} \citep{schroff2015facenet} trains an embedding by enforcing that the distance from an anchor to a positive (same class) sample is smaller than its distance to a negative (different class) sample by some margin. \citet{hermans2017triplet} proposed batch-hard mining, which selects the hardest positive and hardest negative within each batch, dramatically improving training signal compared to random or semi-hard sampling. We use batch-hard mining in our triplet experiments.

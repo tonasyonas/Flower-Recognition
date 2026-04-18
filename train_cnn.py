@@ -11,22 +11,31 @@ from tqdm import tqdm
 from models import MODEL_REGISTRY
 from utils.data_loader import get_dataloaders, get_fewshot_dataloaders
 from utils.set_seed import set_seed
+from utils.losses import batch_hard_triplet_loss
 
 
-def train_one_epoch(model, dataloader, criterion, optimizer, device, scaler=None):
-    """Train for one epoch with optional AMP. MixUp is handled in the dataloader collate_fn."""
+def train_one_epoch(model, dataloader, criterion, optimizer, device, scaler=None,
+                    triplet_alpha=0.0, triplet_margin=0.5):
+    """Train one epoch with optional AMP. MixUp is handled in the dataloader collate_fn.
+    Triplet loss is added to CE loss when triplet_alpha > 0 (requires model to return embeddings)."""
     model.train()
     running_loss = 0.0
     correct = 0
     total = 0
+    use_triplet = triplet_alpha > 0
 
     for inputs, targets in tqdm(dataloader, desc="Training", leave=False):
         inputs, targets = inputs.to(device, non_blocking=True), targets.to(device, non_blocking=True)
         optimizer.zero_grad()
 
         with torch.amp.autocast('cuda', enabled=scaler is not None):
-            logits, _ = model(inputs)
+            logits, embeddings = model(inputs)
             loss = criterion(logits, targets)
+        if use_triplet and embeddings is not None and targets.ndim == 1:
+            # Triplet requires hard labels; skip if MixUp produced soft labels.
+            # Compute outside autocast in float32 for numerical stability.
+            triplet = batch_hard_triplet_loss(embeddings.float(), targets, margin=triplet_margin)
+            loss = loss + triplet_alpha * triplet
 
         if scaler is not None:
             scaler.scale(loss).backward()
@@ -71,7 +80,7 @@ def validate(model, dataloader, criterion, device):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train CNN variants on Flowers 102")
+    parser = argparse.ArgumentParser(description="Train CNN/VPT variants on Flowers 102")
     parser.add_argument('--model', type=str, required=True,
                         choices=list(MODEL_REGISTRY.keys()),
                         help='Model variant to train')
@@ -89,11 +98,16 @@ def main():
                         help='Use stronger augmentation (RandomResizedCrop, ColorJitter)')
     parser.add_argument('--num_prompts', type=int, default=10,
                         help='Number of visual prompts (for VPT models only)')
+    parser.add_argument('--triplet_alpha', type=float, default=0.0,
+                        help='Weight for batch-hard triplet loss (0=disabled, 0.2=recommended). '
+                             'Total loss = CE + triplet_alpha * triplet.')
+    parser.add_argument('--triplet_margin', type=float, default=0.5,
+                        help='Margin for triplet loss')
     args = parser.parse_args()
 
     set_seed(args.seed)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Training {args.model} on {device}")
+    print(f"Training {args.model} on {device} (seed={args.seed})")
 
     # Data (MixUp applied via collate_fn in dataloader)
     if args.k_shot:
@@ -122,6 +136,8 @@ def main():
     criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
     if args.label_smoothing > 0:
         print(f"Label smoothing: {args.label_smoothing}")
+    if args.triplet_alpha > 0:
+        print(f"Triplet loss enabled (alpha={args.triplet_alpha}, margin={args.triplet_margin})")
     optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
@@ -140,7 +156,10 @@ def main():
     ls_suffix = f'_ls{args.label_smoothing}' if args.label_smoothing > 0 else ''
     aug_suffix = '_strongaug' if args.strong_aug else ''
     prompt_suffix = f'_p{args.num_prompts}' if is_vpt and args.num_prompts != 10 else ''
-    exp_name = f'{args.model}{shot_suffix}{mixup_suffix}{ls_suffix}{aug_suffix}{prompt_suffix}'
+    triplet_suffix = f'_triplet{args.triplet_alpha}' if args.triplet_alpha > 0 else ''
+    seed_suffix = f'_seed{args.seed}' if args.seed != 69 else ''
+    exp_name = (f'{args.model}{shot_suffix}{mixup_suffix}{ls_suffix}'
+                f'{aug_suffix}{prompt_suffix}{triplet_suffix}{seed_suffix}')
     log_path = f'results/logs/{exp_name}_training_log.csv'
     checkpoint_path = f'results/checkpoints/best_{exp_name}.pth'
 
@@ -152,7 +171,9 @@ def main():
 
         for epoch in range(args.epochs):
             start = time.time()
-            train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, device, scaler)
+            train_loss, train_acc = train_one_epoch(
+                model, train_loader, criterion, optimizer, device, scaler,
+                triplet_alpha=args.triplet_alpha, triplet_margin=args.triplet_margin)
             val_loss, val_acc = validate(model, val_loader, criterion, device)
             lr = scheduler.get_last_lr()[0]
             scheduler.step()

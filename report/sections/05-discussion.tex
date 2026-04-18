@@ -1,24 +1,10 @@
 \subsection{Why Architectural Modifications Hurt}
 
-The consistent ranking of the unmodified ResNet18 baseline above every dilated, deformable, depthwise, and hybrid variant is a counter-intuitive finding. Three factors explain it.
+The consistent ranking of the unmodified ResNet18 baseline above every dilated, deformable, depthwise, and hybrid variant comes from three compounding factors. ImageNet-pretrained weights are calibrated for the standard $3 \times 3$ convolution; dilation samples across a wider area than the weights expect, and deformable convolution adds an offset predictor that starts at zero and would need substantial data to learn useful displacements. The extra learnable parameters and modified gradient flow complicate the loss landscape, which 1020 training images are not enough to explore. And the inductive biases of these operators (dilated for dense prediction, deformable for articulated objects) do not align with what flower classification needs at this scale, which is to preserve and lightly adapt strong pre-trained features.
 
-\textbf{Pre-trained feature compatibility.} ImageNet-pre-trained ResNet18 weights encode hierarchical features, low-level edges and textures in early layers and complex object parts in later layers, that transfer well to flower classification. Modifying the convolutional operator changes the computation that those weights were calibrated for. Dilation spreads the kernel sampling across a wider area than the original training expected. Deformable convolution adds an offset predictor that starts at zero and would need substantial data to learn useful displacements.
+\subsection{Why Each Convolution Variant Failed}
 
-\textbf{Optimisation landscape.} Advanced convolution variants introduce additional learnable parameters (offset prediction in deformable) or modified gradient flow (dilation), which complicate the loss landscape. With only 1020 training images the model cannot explore the landscape sufficiently to find a solution as good as the baseline's.
-
-\textbf{Inductive bias mismatch.} Dilated convolution was designed for dense prediction tasks like semantic segmentation, where wide context matters. Deformable convolution targets articulated objects with significant geometric variation. Neither bias matches what flower classification needs at this scale, which is to preserve and lightly adapt strong pre-trained features.
-
-\subsection{Deformable Convolutions: Promise and Challenges}
-
-Despite ranking below the baseline, deformable convolution is the strongest of the four advanced operators (83.46\% MPC, 2.7 below baseline). This is consistent with the design intent: an offset-based sampler can in principle handle the irregular geometry of flower petals. The few-shot table makes the optimisation problem more visible: at $k = 1$ the deformable variant trails the baseline by 8 points (26.96\% vs.\ 35.20\%), because the offset predictor cannot learn good offsets from a single example per class. Plausible improvements include lower learning rates for the offset branch, a warm-up phase before joint optimisation, and larger batches to stabilise gradients.
-
-\subsection{Hybrid Model: Non-Trivial Combination}
-
-Our novel hybrid (dilated in \texttt{layer3}, deformable in \texttt{layer4}) reaches 81.34\% MPC, between dilated alone (78.53\%) and deformable alone (83.46\%). The intuition was that intermediate features benefit from a wider receptive field and high-level features benefit from adaptive sampling, but the combination does not produce a synergistic gain. We see two failure modes: feature scale mismatch between the dilated mid-level features and the deformable late-level sampling, and a compounding of the optimisation difficulties present in each component.
-
-\subsection{Depthwise-Separable: When Efficiency Hurts}
-
-The depthwise variant's 60\% MPC is the largest accuracy drop in our table. The kernel shape change prevents copying pre-trained weights, so \texttt{layer2}, \texttt{layer3}, and \texttt{layer4} learn from scratch, and 50 epochs over 1020 images are not enough to recover. The 7$\times$ parameter reduction is real but does not justify a 26-point accuracy loss. For applications where storage is the only concern, depthwise can be considered, but on Flowers 102 it is the wrong choice.
+Each of the four advanced convolutions failed for a slightly different reason. \emph{Deformable convolution} (83.46\% MPC, 2.7 below baseline) was the strongest of the four; the offset-based sampler should in principle handle the irregular geometry of petals, but the few-shot table makes the problem visible: at $k = 1$ deformable trails the baseline by 8 points because the offset predictor cannot learn useful displacements from one example per class. \emph{Our novel hybrid} (dilated in \texttt{layer3}, deformable in \texttt{layer4}) sits at 81.34\%, between the two components, indicating that the modifications do not compose synergistically and instead compound their individual optimisation difficulties. \emph{Depthwise-separable convolution} (59.71\% MPC) suffered most because its kernel shape change prevents copying pre-trained weights; \texttt{layer2}--\texttt{layer4} learn from scratch and 50 epochs over 1020 images are insufficient to recover the gap. The 7$\times$ parameter reduction does not justify a 26-point accuracy loss on this dataset.
 
 \subsection{Regularization: Freezing Wins, MixUp Hurts}
 
@@ -36,8 +22,10 @@ The prompt length ablation (Figure~\ref{fig:prompt-length}) shows that longer pr
 
 \subsection{Comparison with Prior Work}
 
-\citet{nilsback2008} reported 72.8\% accuracy on Flowers 102 with hand-engineered SIFT, HOG, and HSV features combined in a multiple-kernel SVM. Our VPT-Deep result (91.64\% test accuracy, 92.83\% MPC) is in the range reported by recent Transformer-based methods, though direct comparison is hard because many papers use larger backbones (ViT-L/14), additional tricks, or different splits. \citet{jia2022vpt} reported 89.11\% average accuracy across five FGVC datasets for VPT-Deep on a ViT-B/16 pre-trained on ImageNet-21k; our 92.83\% MPC on ImageNet-1k pre-trained weights sits above that average.
+\citet{nilsback2008} reported 72.8\% accuracy with a multiple-kernel SVM on hand-engineered features. Our VPT-Deep result (92.83\% MPC) sits above the 89.11\% FGVC average reported by \citet{jia2022vpt} for VPT-Deep on a ViT-B/16, though direct comparison with recent papers is hard because many use larger backbones (ViT-L/14) or different splits.
 
-\subsection{Limitations}
+\subsection{Add-Ons, Variance, and Limitations}
 
-Every result reflects a single seed and a single backbone scale. Variance across seeds is the most obvious gap. We did not implement triplet loss (suggested in the project handout) or test-time augmentation, both of which could push the numbers higher. The prompt length ablation indicates $p = 50$ outperforms our $p = 10$ default, so the VPT-Deep numbers in Table~\ref{tab:main-results} are not the best the method can produce.
+We tested two add-ons on top of the best methods. \textbf{Triplet loss}, computed batch-hard on L2-normalised CLS embeddings, raised VPT-Deep validation accuracy from 93.63\% to 94.02\% but did not change the test-set numbers, suggesting the auxiliary objective tightens embeddings on the validation distribution without generalising. Numerical stability required computing the triplet term in float32 outside the mixed-precision autocast. \textbf{Test-time augmentation} consistently improved every method by 0.4--0.9 MPC points at no training cost (Table~\ref{tab:tta}); VPT-Deep + TTA reaches 93.27\% MPC, our highest test result.
+
+The seed sweep (Section~\ref{sec:seed-sweep}) shows the relative ranking VPT-Deep $>$ Frozen $>$ Baseline holds at every seed and standard deviations stay below 1 point. VPT-Deep has the smallest spread (0.49 std), consistent with its tiny trainable parameter count limiting overfitting to any particular initialisation.
