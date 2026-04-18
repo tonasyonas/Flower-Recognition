@@ -10,18 +10,18 @@ Table~\ref{tab:main-results} reports test-set accuracy, mean per-class accuracy,
 Method & Test Acc (\%) & MPC Acc (\%) & Top-5 (\%) & Trainable params \\
 \midrule
 \textbf{VPT-Deep}              & \textbf{91.64} & \textbf{92.83} & \textbf{97.93} & \textbf{170{,}598} \\
-Frozen ResNet18                & 88.52 & 90.82 & --- & 10{,}545{,}766 \\
-Label Smoothing ($\alpha{=}0.1$) & 87.27 & 89.40 & --- & 11{,}228{,}838 \\
-Label Smoothing + Strong Aug   & 86.40 & 88.24 & --- & 11{,}228{,}838 \\
-ResNet50                       & 85.93 & 88.07 & --- & 23{,}717{,}030 \\
+Frozen ResNet18                & 88.52 & 90.82 & 96.85 & 10{,}545{,}766 \\
+Label Smoothing ($\alpha{=}0.1$) & 87.27 & 89.40 & 96.16 & 11{,}228{,}838 \\
+Label Smoothing + Strong Aug   & 86.40 & 88.24 & 95.82 & 11{,}228{,}838 \\
+ResNet50                       & 85.93 & 88.07 & 96.70 & 23{,}717{,}030 \\
 VPT-Shallow                    & 84.13 & 85.70 & 95.43 & 86{,}118 \\
-Baseline                       & 84.42 & 86.11 & --- & 11{,}228{,}838 \\
-Strong Augmentation            & 84.42 & 86.11 & --- & 11{,}228{,}838 \\
-Deformable                     & 81.33 & 83.46 & --- & 11{,}415{,}534 \\
-MixUp ($\alpha{=}0.2$)         & 80.52 & 83.50 & --- & 11{,}228{,}838 \\
-Hybrid (ours)                  & 78.73 & 81.34 & --- & 11{,}353{,}290 \\
-Dilated                        & 75.95 & 78.53 & --- & 11{,}228{,}838 \\
-Depthwise                      & 57.03 & 59.71 & --- & 1{,}623{,}270 \\
+Baseline                       & 84.42 & 86.11 & 94.84 & 11{,}228{,}838 \\
+Strong Augmentation            & 84.42 & 86.11 & 94.84 & 11{,}228{,}838 \\
+Deformable                     & 81.33 & 83.46 & 94.31 & 11{,}415{,}534 \\
+MixUp ($\alpha{=}0.2$)         & 80.52 & 83.50 & 92.34 & 11{,}228{,}838 \\
+Hybrid (ours)                  & 78.73 & 81.34 & 93.01 & 11{,}353{,}290 \\
+Dilated                        & 75.95 & 78.53 & 91.41 & 11{,}228{,}838 \\
+Depthwise                      & 57.03 & 59.71 & 81.54 & 1{,}623{,}270 \\
 \bottomrule
 \end{tabular}
 \caption{Test-set results for every model we trained, sorted by mean per-class accuracy. VPT-Deep wins by a margin of more than two MPC points while training only $\sim$0.2\% of its backbone parameters.}
