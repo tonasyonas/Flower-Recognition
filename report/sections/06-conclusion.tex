@@ -6,4 +6,4 @@ Every architectural modification to ResNet18 hurt. Dilated, deformable, depthwis
 
 Default regularizers did not always help. MixUp dropped accuracy by 2.6 points at ten shots per class, and triplet loss raised VPT-Deep's validation accuracy without moving the test number. Both failures had the same root cause: the regularizer's assumptions break when data is this scarce.
 
-In low-data fine-grained classification, optimisation stability and the preservation of pre-trained representations matter more than architectural innovation. Three follow-ups would push the numbers further: extending the prompt length ablation past $p = 50$, testing VPT on larger ViT-L/H backbones, and reporting variance across multiple seeds on the test set.
+In low-data fine-grained classification, optimisation stability and the preservation of pre-trained representations matter more than architectural innovation. The obvious next steps are to extend the prompt length ablation past $p = 50$ where accuracy is still climbing, run VPT on larger ViT-L or ViT-H backbones, and report test-set variance across multiple seeds.
