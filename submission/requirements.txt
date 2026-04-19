@@ -1,0 +1,19 @@
+# Core deep learning
+# IMPORTANT: install torch with CUDA support from PyTorch's index, e.g.:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+# (replace cu128 with your CUDA version: cu121, cu124, etc.)
+torch>=2.1.0
+torchvision>=0.16.0
+
+# Training utilities
+tqdm>=4.65.0
+scikit-learn>=1.3.0
+
+# Data and plotting
+numpy>=1.24.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+
+# Notebooks (optional, only needed for notebooks/)
+jupyter>=1.0.0
+ipykernel>=6.0.0
